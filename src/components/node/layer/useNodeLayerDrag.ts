@@ -2,6 +2,7 @@
  * @file Hook for handling node drag interactions.
  */
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { useCanvasInteractionActions, useCanvasInteractionDragState } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasGridSettings, useNodeCanvasViewportScale } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitionList } from "../../../contexts/node-definitions/hooks/useNodeDefinitionList";
@@ -84,11 +85,12 @@ export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult
       nodeDefinitionsRef.current,
     );
 
-    if (Object.keys(finalPositions).length > 0) {
-      nodeEditorActionsRef.current.moveNodes(finalPositions);
-    }
-
-    interactionActionsRef.current.endNodeDrag();
+    flushSync(() => {
+      if (Object.keys(finalPositions).length > 0) {
+        nodeEditorActionsRef.current.moveNodes(finalPositions);
+      }
+      interactionActionsRef.current.endNodeDrag();
+    });
   }, []);
 
   React.useEffect(() => {

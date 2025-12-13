@@ -35,7 +35,8 @@ export type ShowContextMenuOptions = {
   fromPort?: BasePort;
 };
 import {
-  createEmptyConnectablePorts,
+  EMPTY_CONNECTABLE_PORTS,
+  isConnectablePortsEmpty,
   type ConnectablePortsResult,
 } from "../../core/port/connectivity/connectableTypes";
 
@@ -185,7 +186,16 @@ const editorActionStateHandlers = createActionHandlerMap<EditorActionState, type
     }),
     updateConnectablePorts: (state, action) => ({
       ...state,
-      connectablePorts: action.payload.connectablePorts,
+      connectablePorts: (() => {
+        const next = action.payload.connectablePorts;
+        if (next === state.connectablePorts) {
+          return state.connectablePorts;
+        }
+        if (isConnectablePortsEmpty(state.connectablePorts) && isConnectablePortsEmpty(next)) {
+          return state.connectablePorts;
+        }
+        return next;
+      })(),
     }),
     showContextMenu: (state, action) => ({
       ...state,
@@ -238,7 +248,7 @@ export const defaultEditorActionState: EditorActionState = {
   hoveredConnectionId: null,
   hoveredPort: null,
   connectedPorts: new Set<string>(),
-  connectablePorts: createEmptyConnectablePorts(),
+  connectablePorts: EMPTY_CONNECTABLE_PORTS,
   contextMenu: {
     visible: false,
     position: { x: 0, y: 0 },

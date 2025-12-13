@@ -12,7 +12,7 @@ import {
   ConnectionSwitchBehavior,
 } from "../../../core/port/connectivity/connectionPlanning";
 import type { Port } from "../../../types/core";
-import { createEmptyConnectablePorts } from "../../../core/port/connectivity/connectableTypes";
+import { EMPTY_CONNECTABLE_PORTS } from "../../../core/port/connectivity/connectableTypes";
 
 export const useConnectionOperations = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
@@ -120,13 +120,13 @@ export const useConnectionOperations = () => {
   const endConnectionDrag = React.useCallback(() => {
     interactionActionsRef.current.endConnectionDrag();
     actionActionsRef.current.setHoveredPort(null);
-    actionActionsRef.current.updateConnectablePorts(createEmptyConnectablePorts());
+    actionActionsRef.current.updateConnectablePorts(EMPTY_CONNECTABLE_PORTS);
   }, []);
 
   const endConnectionDisconnect = React.useCallback(() => {
     interactionActionsRef.current.endConnectionDisconnect();
     actionActionsRef.current.setHoveredPort(null);
-    actionActionsRef.current.updateConnectablePorts(createEmptyConnectablePorts());
+    actionActionsRef.current.updateConnectablePorts(EMPTY_CONNECTABLE_PORTS);
   }, []);
 
   return { completeConnectionDrag, completeDisconnectDrag, endConnectionDrag, endConnectionDisconnect };

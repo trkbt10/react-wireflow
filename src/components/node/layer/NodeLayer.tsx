@@ -23,6 +23,8 @@ import { useNodeLayerConnections } from "./useNodeLayerConnections";
 import { useNodeLayerPorts } from "./useNodeLayerPorts";
 import { useNodeSelectionInteractions } from "../hooks/useNodeSelectionInteractions";
 import { useNodeCanvasGridSettings } from "../../../contexts/composed/canvas/viewport/context";
+import { EMPTY_CONNECTABLE_PORTS, isConnectablePortsEmpty } from "../../../core/port/connectivity/connectableTypes";
+import { parsePortKey } from "../../../core/port/identity/key";
 
 export type NodeLayerProps = {
   doubleClickToEdit?: boolean;
@@ -129,6 +131,25 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   useNodeLayerConnections();
 
   const { hoveredPort, connectablePorts } = actionState;
+  const connectableNodeIds = React.useMemo(() => {
+    if (isConnectablePortsEmpty(connectablePorts)) {
+      return new Set<string>();
+    }
+    const nodeIds = new Set<string>();
+    if (connectablePorts.descriptors.size > 0) {
+      for (const descriptor of connectablePorts.descriptors.values()) {
+        nodeIds.add(descriptor.nodeId);
+      }
+      return nodeIds;
+    }
+    for (const portKey of connectablePorts.ids) {
+      const parsed = parsePortKey(portKey);
+      if (parsed) {
+        nodeIds.add(parsed.nodeId);
+      }
+    }
+    return nodeIds;
+  }, [connectablePorts]);
 
   // Use shared memoized Sets from context
   const selectedNodeIdsSet = useSelectedNodeIdsSet();
@@ -150,6 +171,8 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
         const candidatePortIdForNode =
           connectionDragMeta?.candidatePortNodeId === node.id ? connectionDragMeta.candidatePortId ?? undefined : undefined;
 
+        const connectablePortsForNode = connectableNodeIds.has(node.id) ? connectablePorts : EMPTY_CONNECTABLE_PORTS;
+
         return (
           <NodeComponent
             key={node.id}
@@ -165,7 +188,7 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
             onPortPointerMove={onPortPointerMove}
             onPortPointerLeave={onPortPointerLeave}
             onPortPointerCancel={onPortPointerCancel}
-            connectablePorts={connectablePorts}
+            connectablePorts={connectablePortsForNode}
             connectingPort={connectingPortForNode}
             hoveredPort={hoveredPortForNode}
             connectedPortIds={connectedPortIdsByNode.get(node.id)}

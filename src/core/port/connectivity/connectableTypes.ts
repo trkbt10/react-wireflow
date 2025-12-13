@@ -51,6 +51,20 @@ export const createEmptyConnectablePorts = (): ConnectablePortsResult => ({
 });
 
 /**
+ * Shared empty ConnectablePortsResult instance.
+ * Do not mutate its internal Set/Map.
+ */
+export const EMPTY_CONNECTABLE_PORTS: ConnectablePortsResult = createEmptyConnectablePorts();
+
+export const isConnectablePortsEmpty = (connectablePorts: ConnectablePortsResult): boolean => {
+  return (
+    connectablePorts.ids.size === 0 &&
+    connectablePorts.descriptors.size === 0 &&
+    connectablePorts.source === null
+  );
+};
+
+/**
  * Minimal interface for checking port connectability
  * Accepts either full ConnectablePortsResult or just the ids Set
  */

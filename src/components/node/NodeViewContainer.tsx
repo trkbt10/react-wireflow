@@ -10,7 +10,7 @@ import { useNodeEditorApi, useNodeEditorSelector } from "../../contexts/composed
 import { useNodeDefinition } from "../../contexts/node-definitions/hooks/useNodeDefinition";
 import { useExternalDataRef } from "../../contexts/external-data/ExternalDataContext";
 import { useExternalData } from "../../contexts/external-data/useExternalData";
-import { useCanvasInteractionActions, useCanvasInteractionResizeState } from "../../contexts/composed/canvas/interaction/context";
+import { useCanvasInteractionActions, useCanvasInteractionSelector } from "../../contexts/composed/canvas/interaction/context";
 import { computeNodeDerivedState } from "../../core/node/nodeState";
 import { hasGroupBehavior } from "../../types/behaviors";
 import { NodeViewPresenter } from "./NodeViewPresenter";
@@ -65,7 +65,13 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
   const editingState = useInlineEditingState();
   const { isEditing, startEditing, updateValue, confirmEdit, cancelEdit } = useInlineEditingActions();
   const { actions: interactionActions } = useCanvasInteractionActions();
-  const resizeState = useCanvasInteractionResizeState();
+  const resizeState = useCanvasInteractionSelector((state) => {
+    const current = state.resizeState;
+    if (!current) {
+      return null;
+    }
+    return current.nodeId === node.id ? current : null;
+  });
   const nodeDefinition = useNodeDefinition(node.type);
   const externalDataRef = useExternalDataRef(node.id);
   const externalDataState = useExternalData(node, externalDataRef);

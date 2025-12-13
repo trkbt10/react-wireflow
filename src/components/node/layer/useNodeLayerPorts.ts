@@ -17,7 +17,7 @@ import { PORT_INTERACTION_THRESHOLD } from "../../../constants/interaction";
 import type { Port, ConnectionDisconnectState } from "../../../types/core";
 import { useConnectionPortResolvers } from "../../../contexts/node-ports/hooks/useConnectionPortResolvers";
 import { useConnectionOperations } from "../../../contexts/node-ports/hooks/useConnectionOperations";
-import { createEmptyConnectablePorts } from "../../../core/port/connectivity/connectableTypes";
+import { EMPTY_CONNECTABLE_PORTS } from "../../../core/port/connectivity/connectableTypes";
 
 export const useNodeLayerPorts = () => {
   const { actions: actionActions } = useEditorActionStateActions();
@@ -241,7 +241,7 @@ export const useNodeLayerPorts = () => {
     actionActions.setHoveredPort(null);
     lastHoveredPortIdRef.current = null;
     if (!interactionState.connectionDragState) {
-      actionActions.updateConnectablePorts(createEmptyConnectablePorts());
+      actionActions.updateConnectablePorts(EMPTY_CONNECTABLE_PORTS);
     }
   });
 
