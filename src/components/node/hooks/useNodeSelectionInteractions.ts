@@ -5,7 +5,7 @@ import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
-import { useNodeCanvas } from "../../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useInteractionSettings } from "../../../contexts/interaction-settings/context";
 import type { PointerType } from "../../../types/interaction";
 import { usePointerShortcutMatcher } from "../../../contexts/interaction-settings/hooks/usePointerShortcutMatcher";
@@ -32,7 +32,7 @@ export const useNodeSelectionInteractions = (
   const { state: actionState, actions: actionActions } = useEditorActionState();
   const { state: _interactionState, actions: interactionActions } = useCanvasInteraction();
   const { state: nodeEditorState } = useNodeEditor();
-  const { utils } = useNodeCanvas();
+  const utils = useNodeCanvasUtils();
   const interactionSettings = useInteractionSettings();
   const matchesPointerAction = usePointerShortcutMatcher();
   const { registry: nodeDefinitionRegistry } = useNodeDefinitions();

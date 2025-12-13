@@ -5,6 +5,7 @@ import * as React from "react";
 import { createAction, type ActionUnion, type BoundActionCreators } from "../../../../utils/typedActions";
 import type { Position, Viewport, GridSettings } from "../../../../types/core";
 import type { createCanvasUtils } from "./utils/coordinateConversion";
+import type { NodeCanvasStore } from "./store";
 
 export type PanState = {
   isPanning: boolean;
@@ -45,7 +46,7 @@ export type NodeCanvasAction = ActionUnion<typeof nodeCanvasActions>;
 
 // Context types
 export type NodeCanvasActionsValue = {
-  dispatch: React.Dispatch<NodeCanvasAction>;
+  dispatch: (action: NodeCanvasAction) => void;
   actions: BoundActionCreators<typeof nodeCanvasActions>;
   actionCreators: typeof nodeCanvasActions;
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -53,29 +54,19 @@ export type NodeCanvasActionsValue = {
   setContainerElement: (element: HTMLDivElement | null) => void;
 };
 
-export type NodeCanvasContextValue = NodeCanvasActionsValue & {
-  state: NodeCanvasState;
-  utils: ReturnType<typeof createCanvasUtils>;
+export type NodeCanvasUtils = ReturnType<typeof createCanvasUtils>;
+
+export type NodeCanvasApiValue = NodeCanvasActionsValue & {
+  store: NodeCanvasStore;
+  utils: NodeCanvasUtils;
 };
 
-// Split contexts for performance optimization
-const NodeCanvasStateContext = React.createContext<NodeCanvasState | null>(null);
-NodeCanvasStateContext.displayName = "NodeCanvasStateContext";
+export type NodeCanvasContextValue = NodeCanvasActionsValue & {
+  state: NodeCanvasState;
+  utils: NodeCanvasUtils;
+};
 
-const NodeCanvasViewportOffsetContext = React.createContext<Position | null>(null);
-NodeCanvasViewportOffsetContext.displayName = "NodeCanvasViewportOffsetContext";
-
-const NodeCanvasViewportScaleContext = React.createContext<number | null>(null);
-NodeCanvasViewportScaleContext.displayName = "NodeCanvasViewportScaleContext";
-
-const NodeCanvasGridSettingsContext = React.createContext<GridSettings | null>(null);
-NodeCanvasGridSettingsContext.displayName = "NodeCanvasGridSettingsContext";
-
-const NodeCanvasActionsContext = React.createContext<NodeCanvasActionsValue | null>(null);
-NodeCanvasActionsContext.displayName = "NodeCanvasActionsContext";
-
-// Combined context for backward compatibility
-export const NodeCanvasContext = React.createContext<NodeCanvasContextValue | null>(null);
+export const NodeCanvasContext = React.createContext<NodeCanvasApiValue | null>(null);
 NodeCanvasContext.displayName = "NodeCanvasContext";
 
 // Hooks
@@ -85,35 +76,47 @@ NodeCanvasContext.displayName = "NodeCanvasContext";
  * Use this when you only need to read state and don't need actions
  */
 export const useNodeCanvasState = (): NodeCanvasState => {
-  const state = React.useContext(NodeCanvasStateContext);
-  if (!state) {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
     throw new Error("useNodeCanvasState must be used within a NodeCanvasProvider");
   }
-  return state;
+  return React.useSyncExternalStore(context.store.subscribe, context.store.getState, context.store.getState);
 };
 
 export const useNodeCanvasViewportOffset = (): Position => {
-  const offset = React.useContext(NodeCanvasViewportOffsetContext);
-  if (!offset) {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
     throw new Error("useNodeCanvasViewportOffset must be used within a NodeCanvasProvider");
   }
-  return offset;
+  return React.useSyncExternalStore(
+    context.store.subscribe,
+    () => context.store.getState().viewport.offset,
+    () => context.store.getState().viewport.offset,
+  );
 };
 
 export const useNodeCanvasViewportScale = (): number => {
-  const scale = React.useContext(NodeCanvasViewportScaleContext);
-  if (scale === null) {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
     throw new Error("useNodeCanvasViewportScale must be used within a NodeCanvasProvider");
   }
-  return scale;
+  return React.useSyncExternalStore(
+    context.store.subscribe,
+    () => context.store.getState().viewport.scale,
+    () => context.store.getState().viewport.scale,
+  );
 };
 
 export const useNodeCanvasGridSettings = (): GridSettings => {
-  const gridSettings = React.useContext(NodeCanvasGridSettingsContext);
-  if (!gridSettings) {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
     throw new Error("useNodeCanvasGridSettings must be used within a NodeCanvasProvider");
   }
-  return gridSettings;
+  return React.useSyncExternalStore(
+    context.store.subscribe,
+    () => context.store.getState().gridSettings,
+    () => context.store.getState().gridSettings,
+  );
 };
 
 /**
@@ -122,11 +125,19 @@ export const useNodeCanvasGridSettings = (): GridSettings => {
  * The returned actions have stable references and won't cause re-renders
  */
 export const useNodeCanvasActions = (): NodeCanvasActionsValue => {
-  const actions = React.useContext(NodeCanvasActionsContext);
-  if (!actions) {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
     throw new Error("useNodeCanvasActions must be used within a NodeCanvasProvider");
   }
-  return actions;
+  return context;
+};
+
+export const useNodeCanvasUtils = (): NodeCanvasUtils => {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
+    throw new Error("useNodeCanvasUtils must be used within a NodeCanvasProvider");
+  }
+  return context.utils;
 };
 
 /**
@@ -138,14 +149,9 @@ export const useNodeCanvas = (): NodeCanvasContextValue => {
   if (!context) {
     throw new Error("useNodeCanvas must be used within a NodeCanvasProvider");
   }
-  return context;
-};
-
-// Export the split contexts for use in provider
-export {
-  NodeCanvasStateContext,
-  NodeCanvasViewportOffsetContext,
-  NodeCanvasViewportScaleContext,
-  NodeCanvasGridSettingsContext,
-  NodeCanvasActionsContext,
+  const state = React.useSyncExternalStore(context.store.subscribe, context.store.getState, context.store.getState);
+  return {
+    ...context,
+    state,
+  };
 };

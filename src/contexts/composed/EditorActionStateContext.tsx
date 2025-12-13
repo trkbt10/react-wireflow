@@ -18,7 +18,7 @@ import {
   copyNodesToClipboard,
   pasteNodesFromClipboard,
 } from "./node-editor/utils/nodeClipboardOperations";
-import { useNodeCanvas } from "./canvas/viewport/context";
+import { useNodeCanvasUtils } from "./canvas/viewport/context";
 import { buildNodeFromDefinition } from "./node-editor/utils/nodeFactory";
 import { findConnectablePortDefinition } from "../../core/port/connectivity/connectability";
 
@@ -347,7 +347,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
   const { state: editorState } = useNodeEditor();
   const editorActions = useNodeEditorActions();
   const nodeDefinitions = useNodeDefinitionList();
-  const { utils: canvasUtils } = useNodeCanvas();
+  const canvasUtils = useNodeCanvasUtils();
 
   // Node operations
   const duplicateNodes = React.useCallback(

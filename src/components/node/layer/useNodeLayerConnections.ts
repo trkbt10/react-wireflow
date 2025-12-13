@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
-import { useNodeCanvas } from "../../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
 import { getConnectableNodeTypes } from "../../../core/port/connectivity/connectability";
@@ -16,7 +16,7 @@ export const useNodeLayerConnections = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
   const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
   const { state: nodeEditorState } = useNodeEditor();
-  const { utils } = useNodeCanvas();
+  const utils = useNodeCanvasUtils();
   const { registry } = useNodeDefinitions();
   const { resolveCandidatePort, resolveDisconnectCandidate } = useConnectionPortResolvers();
   const { completeConnectionDrag, completeDisconnectDrag, endConnectionDrag, endConnectionDisconnect } =

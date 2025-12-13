@@ -21,6 +21,7 @@ import {
 import { clampZoomScale } from "../viewport/utils/zoomScale";
 import { toggleIds } from "./utils/selectionOperations";
 import type { NodeId } from "../../../../types/core";
+import { useRafThrottledCallback } from "../../../../hooks/useRafThrottledCallback";
 
 type PinchPointer = {
   clientX: number;
@@ -70,6 +71,19 @@ export const useCanvasPointerActions = ({
   const activePinchPointersRef = React.useRef<Map<number, PinchPointer>>(new Map());
   const pinchStateRef = React.useRef<PinchState | null>(null);
   const initialSelectionRef = React.useRef<NodeId[]>([]);
+
+  const handlePanUpdate = React.useEffectEvent((position: { x: number; y: number }) => {
+    canvasActions.updatePan(position);
+  });
+  const { schedule: schedulePanUpdate, cancel: cancelPanUpdate } = useRafThrottledCallback(handlePanUpdate);
+  const schedulePanUpdateRef = React.useRef(schedulePanUpdate);
+  const cancelPanUpdateRef = React.useRef(cancelPanUpdate);
+  schedulePanUpdateRef.current = schedulePanUpdate;
+  cancelPanUpdateRef.current = cancelPanUpdate;
+
+  React.useEffect(() => {
+    return () => cancelPanUpdateRef.current();
+  }, []);
 
   const pinchPointerTypes = React.useMemo(() => {
     return new Set(interactionSettings.pinchZoom.pointerTypes);
@@ -335,13 +349,13 @@ export const useCanvasPointerActions = ({
           primaryPointerRef.current = null;
         }
       } else if (primaryPointer.status === "pan") {
-        canvasActions.updatePan({ x: e.clientX, y: e.clientY });
+        schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY });
         return;
       }
     }
 
     if (canvasState.panState.isPanning) {
-      canvasActions.updatePan({ x: e.clientX, y: e.clientY });
+      schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY });
       return;
     }
 
@@ -386,6 +400,7 @@ export const useCanvasPointerActions = ({
     const primaryPointer = primaryPointerRef.current;
     if (primaryPointer && primaryPointer.pointerId === e.pointerId) {
       if (primaryPointer.status === "pan") {
+        schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY }, { immediate: true });
         canvasActions.endPan();
         primaryPointerRef.current = null;
 
@@ -404,6 +419,7 @@ export const useCanvasPointerActions = ({
 
       primaryPointerRef.current = null;
     } else if (canvasState.panState.isPanning) {
+      schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY }, { immediate: true });
       canvasActions.endPan();
 
       const container = containerRef.current;

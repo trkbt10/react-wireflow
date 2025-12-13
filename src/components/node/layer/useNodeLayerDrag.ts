@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
-import { useNodeCanvas } from "../../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasGridSettings, useNodeCanvasViewportScale } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitionList } from "../../../contexts/node-definitions/hooks/useNodeDefinitionList";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
 import { snapMultipleToGrid } from "../../../contexts/composed/node-editor/utils/gridSnap";
@@ -13,15 +13,16 @@ import type { UseGroupManagementResult } from "../../../contexts/composed/node-e
 export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult["moveGroupWithChildren"]) => {
   const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
   const { state: nodeEditorState, actions: nodeEditorActions } = useNodeEditor();
-  const { state: canvasState } = useNodeCanvas();
+  const viewportScale = useNodeCanvasViewportScale();
+  const gridSettings = useNodeCanvasGridSettings();
   const nodeDefinitions = useNodeDefinitionList();
 
   const handlePointerMove = React.useEffectEvent((event: PointerEvent) => {
     if (!interactionState.dragState) {
       return;
     }
-    const deltaX = (event.clientX - interactionState.dragState.startPosition.x) / canvasState.viewport.scale;
-    const deltaY = (event.clientY - interactionState.dragState.startPosition.y) / canvasState.viewport.scale;
+    const deltaX = (event.clientX - interactionState.dragState.startPosition.x) / viewportScale;
+    const deltaY = (event.clientY - interactionState.dragState.startPosition.y) / viewportScale;
 
     interactionActions.updateNodeDrag({ x: deltaX, y: deltaY });
   });
@@ -33,8 +34,8 @@ export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult
     const { nodeIds, initialPositions, offset } = interactionState.dragState;
     const newPositions = calculateNewPositions(nodeIds, initialPositions, offset);
 
-    const snappedPositions = canvasState.gridSettings.snapToGrid
-      ? snapMultipleToGrid(newPositions, canvasState.gridSettings, nodeIds[0])
+    const snappedPositions = gridSettings.snapToGrid
+      ? snapMultipleToGrid(newPositions, gridSettings, nodeIds[0])
       : newPositions;
 
     const finalPositions = handleGroupMovement(

@@ -6,7 +6,6 @@ import {
   useEditorActionState,
   useSelectedNodeIdsSet,
 } from "../../../contexts/composed/EditorActionStateContext";
-import { useNodeCanvas } from "../../../contexts/composed/canvas/viewport/context";
 import {
   useCanvasInteractionState,
   useDragNodeIdsSets,
@@ -21,6 +20,7 @@ import { useNodeLayerDrag } from "./useNodeLayerDrag";
 import { useNodeLayerConnections } from "./useNodeLayerConnections";
 import { useNodeLayerPorts } from "./useNodeLayerPorts";
 import { useNodeSelectionInteractions } from "../hooks/useNodeSelectionInteractions";
+import { useNodeCanvasGridSettings } from "../../../contexts/composed/canvas/viewport/context";
 
 export type NodeLayerProps = {
   doubleClickToEdit?: boolean;
@@ -34,15 +34,15 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
   const { sortedNodes, connectedPorts } = useNodeEditor();
   const { state: actionState, actions: actionActions } = useEditorActionState();
   const interactionState = useCanvasInteractionState();
-  const { state: canvasState } = useNodeCanvas();
+  const gridSettings = useNodeCanvasGridSettings();
   const { node: NodeComponent } = useRenderers();
 
   // Initialize hooks
   useNodeResize({
     minWidth: 100,
     minHeight: 40,
-    snapToGrid: canvasState.gridSettings.snapToGrid,
-    gridSize: canvasState.gridSettings.size,
+    snapToGrid: gridSettings.snapToGrid,
+    gridSize: gridSettings.size,
   });
 
   const groupManager = useGroupManagement({

@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
-import { useNodeCanvas } from "../../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasActions, useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
 import { usePortPositions } from "../../../contexts/node-ports/context";
@@ -23,7 +23,8 @@ export const useNodeLayerPorts = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
   const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
   const { state: nodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
-  const { containerRef, utils } = useNodeCanvas();
+  const { containerRef } = useNodeCanvasActions();
+  const utils = useNodeCanvasUtils();
   const { calculateNodePortPositions } = usePortPositions();
   const { registry } = useNodeDefinitions();
   const { resolveCandidatePort, resolveDisconnectCandidate } = useConnectionPortResolvers();

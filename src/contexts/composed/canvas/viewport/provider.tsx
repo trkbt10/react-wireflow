@@ -2,158 +2,19 @@
  * @file Provider component for canvas viewport context
  */
 import * as React from "react";
-import { bindActionCreators, createActionHandlerMap } from "../../../../utils/typedActions";
-import { clampZoomScale } from "./utils/zoomScale";
-import { createCanvasUtils } from "./utils/coordinateConversion";
+import { bindActionCreators } from "../../../../utils/typedActions";
 import { useResizeObserver } from "../../../../hooks/useResizeObserver";
 import {
   type NodeCanvasState,
-  type NodeCanvasAction,
   type NodeCanvasActionsValue,
-  type NodeCanvasContextValue,
+  type NodeCanvasApiValue,
   nodeCanvasActions,
-  NodeCanvasStateContext,
-  NodeCanvasViewportOffsetContext,
-  NodeCanvasViewportScaleContext,
-  NodeCanvasGridSettingsContext,
-  NodeCanvasActionsContext,
   NodeCanvasContext,
 } from "./context";
+import { createNodeCanvasStore } from "./store";
+import { defaultNodeCanvasState, nodeCanvasReducer } from "./reducer";
 
-const nodeCanvasHandlers = createActionHandlerMap<NodeCanvasState, typeof nodeCanvasActions>(nodeCanvasActions, {
-  setViewport: (state, action) => ({
-    ...state,
-    viewport: action.payload.viewport,
-  }),
-  panViewport: (state, action) => {
-    const { delta } = action.payload;
-    return {
-      ...state,
-      viewport: {
-        ...state.viewport,
-        offset: {
-          x: state.viewport.offset.x + delta.x,
-          y: state.viewport.offset.y + delta.y,
-        },
-      },
-    };
-  },
-  zoomViewport: (state, action) => {
-    const { scale, center } = action.payload;
-    const newScale = clampZoomScale(scale);
-    if (center) {
-      const scaleRatio = newScale / state.viewport.scale;
-      const newOffset = {
-        x: center.x - (center.x - state.viewport.offset.x) * scaleRatio,
-        y: center.y - (center.y - state.viewport.offset.y) * scaleRatio,
-      };
-      return {
-        ...state,
-        viewport: {
-          offset: newOffset,
-          scale: newScale,
-        },
-      };
-    }
-    return {
-      ...state,
-      viewport: {
-        ...state.viewport,
-        scale: newScale,
-      },
-    };
-  },
-  resetViewport: (state) => ({
-    ...state,
-    viewport: {
-      offset: { x: 0, y: 0 },
-      scale: 1,
-    },
-  }),
-  updateGridSettings: (state, action) => ({
-    ...state,
-    gridSettings: {
-      ...state.gridSettings,
-      ...action.payload.settings,
-    },
-  }),
-  setSpacePanning: (state, action) => ({
-    ...state,
-    isSpacePanning: action.payload.isSpacePanning,
-  }),
-  startPan: (state, action) => ({
-    ...state,
-    panState: {
-      isPanning: true,
-      startPosition: action.payload.position,
-    },
-  }),
-  updatePan: (state, action) => {
-    if (!state.panState.isPanning || !state.panState.startPosition) {
-      return state;
-    }
-    const deltaX = action.payload.position.x - state.panState.startPosition.x;
-    const deltaY = action.payload.position.y - state.panState.startPosition.y;
-    return {
-      ...state,
-      viewport: {
-        ...state.viewport,
-        offset: {
-          x: state.viewport.offset.x + deltaX,
-          y: state.viewport.offset.y + deltaY,
-        },
-      },
-      panState: {
-        ...state.panState,
-        startPosition: action.payload.position,
-      },
-    };
-  },
-  endPan: (state) => ({
-    ...state,
-    panState: {
-      isPanning: false,
-      startPosition: null,
-    },
-  }),
-  setViewBox: (state, action) => ({
-    ...state,
-    viewBox: action.payload.viewBox,
-  }),
-});
-
-// Canvas reducer
-export const nodeCanvasReducer = (state: NodeCanvasState, action: NodeCanvasAction): NodeCanvasState => {
-  const handler = nodeCanvasHandlers[action.type];
-  if (!handler) {
-    return state;
-  }
-  return handler(state, action, undefined);
-};
-
-// Default state
-export const defaultNodeCanvasState: NodeCanvasState = {
-  viewport: {
-    offset: { x: 0, y: 0 },
-    scale: 1,
-  },
-  gridSettings: {
-    enabled: false,
-    size: 20,
-    showGrid: true,
-    snapToGrid: false,
-    snapThreshold: 8,
-  },
-  isSpacePanning: false,
-  panState: {
-    isPanning: false,
-    startPosition: null,
-  },
-  viewBox: {
-    width: 0,
-    height: 0,
-  },
-};
+export { nodeCanvasReducer, defaultNodeCanvasState };
 
 // Provider
 export type NodeCanvasProviderProps = {
@@ -162,34 +23,38 @@ export type NodeCanvasProviderProps = {
 };
 
 export const NodeCanvasProvider: React.FC<NodeCanvasProviderProps> = ({ children, initialState }) => {
-  const [state, dispatch] = React.useReducer(nodeCanvasReducer, { ...defaultNodeCanvasState, ...initialState });
+  const initialStateRef = React.useRef<NodeCanvasState | null>(null);
+  if (!initialStateRef.current) {
+    initialStateRef.current = { ...defaultNodeCanvasState, ...initialState };
+  }
+  const store = React.useMemo(() => createNodeCanvasStore(initialStateRef.current!), []);
 
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [containerElement, setContainerElementState] = React.useState<HTMLDivElement | null>(null);
-  const setContainerElement = React.useCallback((element: HTMLDivElement | null) => {
-    containerRef.current = element;
-    setContainerElementState(element);
-  }, []);
+  const dispatch = store.dispatch;
+
+  const setContainerElement = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      containerRef.current = element;
+      if (!element) {
+        return;
+      }
+      const rect = element.getBoundingClientRect();
+      store.dispatch(nodeCanvasActions.setViewBox({ width: rect.width, height: rect.height }));
+    },
+    [store],
+  );
+
   const boundActions = React.useMemo(() => bindActionCreators(nodeCanvasActions, dispatch), [dispatch]);
 
   const { rect } = useResizeObserver(containerRef, { box: "border-box" });
 
   React.useEffect(() => {
-    if (!containerElement) {
-      return;
-    }
-
-    const initialRect = containerElement.getBoundingClientRect();
-    dispatch(nodeCanvasActions.setViewBox({ width: initialRect.width, height: initialRect.height }));
-  }, [containerElement]);
-
-  React.useEffect(() => {
     if (!rect) {
       return;
     }
-    dispatch(nodeCanvasActions.setViewBox({ width: rect.width, height: rect.height }));
-  }, [rect?.width, rect?.height]);
+    store.dispatch(nodeCanvasActions.setViewBox({ width: rect.width, height: rect.height }));
+  }, [rect?.width, rect?.height, store]);
 
   // Stable actions value - refs and dispatch are stable
   const actionsValue = React.useMemo<NodeCanvasActionsValue>(
@@ -204,38 +69,50 @@ export const NodeCanvasProvider: React.FC<NodeCanvasProviderProps> = ({ children
     [dispatch, boundActions, setContainerElement],
   );
 
-  // Utils depends on viewport state
-  const utils = React.useMemo(
-    () => createCanvasUtils(canvasRef, containerRef, state.viewport),
-    [state.viewport],
-  );
+  const utils = React.useMemo<NodeCanvasApiValue["utils"]>(() => {
+    return {
+      screenToCanvas: (screenX, screenY) => {
+        const element = containerRef.current ?? canvasRef.current;
+        if (!element) {
+          return { x: screenX, y: screenY };
+        }
+        const viewport = store.getState().viewport;
+        const rect = element.getBoundingClientRect();
+        return {
+          x: (screenX - rect.left - viewport.offset.x) / viewport.scale,
+          y: (screenY - rect.top - viewport.offset.y) / viewport.scale,
+        };
+      },
+      canvasToScreen: (canvasX, canvasY) => {
+        const element = containerRef.current ?? canvasRef.current;
+        if (!element) {
+          return { x: canvasX, y: canvasY };
+        }
+        const viewport = store.getState().viewport;
+        const rect = element.getBoundingClientRect();
+        return {
+          x: canvasX * viewport.scale + viewport.offset.x + rect.left,
+          y: canvasY * viewport.scale + viewport.offset.y + rect.top,
+        };
+      },
+    };
+  }, [store]);
 
-  // Combined context value for backward compatibility
-  const contextValue = React.useMemo<NodeCanvasContextValue>(
+  const contextValue = React.useMemo<NodeCanvasApiValue>(
     () => ({
-      state,
-      utils,
       ...actionsValue,
+      store,
+      utils,
     }),
-    [state, utils, actionsValue],
+    [actionsValue, store, utils],
   );
 
   return (
-    <NodeCanvasStateContext.Provider value={state}>
-      <NodeCanvasViewportOffsetContext.Provider value={state.viewport.offset}>
-        <NodeCanvasViewportScaleContext.Provider value={state.viewport.scale}>
-          <NodeCanvasGridSettingsContext.Provider value={state.gridSettings}>
-            <NodeCanvasActionsContext.Provider value={actionsValue}>
-              <NodeCanvasContext.Provider value={contextValue}>{children}</NodeCanvasContext.Provider>
-            </NodeCanvasActionsContext.Provider>
-          </NodeCanvasGridSettingsContext.Provider>
-        </NodeCanvasViewportScaleContext.Provider>
-      </NodeCanvasViewportOffsetContext.Provider>
-    </NodeCanvasStateContext.Provider>
+    <NodeCanvasContext.Provider value={contextValue}>{children}</NodeCanvasContext.Provider>
   );
 };
 
 /**
  * Debug notes:
- * - Reviewed src/components/canvas/CanvasBase.tsx to keep zoom dispatch behavior consistent with updated clamping.
+ * - Reworked provider to use an external store so canvas panning doesn't force re-rendering the full editor subtree.
  */

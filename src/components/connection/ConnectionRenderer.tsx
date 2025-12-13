@@ -9,7 +9,7 @@ import {
   useSelectedNodeIdsSet,
   useSelectedConnectionIdsSet,
 } from "../../contexts/composed/EditorActionStateContext";
-import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasUtils } from "../../contexts/composed/canvas/viewport/context";
 import {
   useCanvasInteractionState,
   useDraggedNodeIdsSet,
@@ -140,7 +140,7 @@ ConnectionRendererInner.displayName = "ConnectionRendererInner";
 const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = ({ connection }) => {
   const { state: nodeEditorState, portLookupMap } = useNodeEditor();
   const { state: actionState, actions: actionActions } = useEditorActionState();
-  const { utils } = useNodeCanvas();
+  const utils = useNodeCanvasUtils();
   const interactionState = useCanvasInteractionState();
   const interactionSettings = useInteractionSettings();
   const matchesPointerAction = usePointerShortcutMatcher();

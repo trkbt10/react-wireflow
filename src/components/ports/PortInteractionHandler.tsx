@@ -6,7 +6,7 @@ import type { Port, NodeId, Position } from "../../types/core";
 import { useNodeEditor } from "../../contexts/composed/node-editor/context";
 import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteraction } from "../../contexts/composed/canvas/interaction/context";
-import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasUtils } from "../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import { usePointerDrag } from "../../hooks/usePointerDrag";
 import { createActionPort } from "../../core/port/identity/variant";
@@ -38,7 +38,7 @@ export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ 
   const { state: nodeEditorState, getNodePorts } = useNodeEditor();
   const { state: actionState, actions: actionActions } = useEditorActionState();
   const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
-  const { utils } = useNodeCanvas();
+  const utils = useNodeCanvasUtils();
   const { registry } = useNodeDefinitions();
   const { completeConnectionDrag, endConnectionDrag } = useConnectionOperations();
   const { resolveCandidatePort } = useConnectionPortResolvers();
