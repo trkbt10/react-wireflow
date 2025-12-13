@@ -4,11 +4,12 @@
  * during node and connection rendering, especially for performance-critical drag operations
  */
 import * as React from "react";
-import { Node, Connection, NodeId, ConnectionId, PortId } from "../../../../types/core";
+import { Node, Connection, NodeId, ConnectionId } from "../../../../types/core";
 import type { NodeDefinition } from "../../../../types/NodeDefinition";
 import { nodeHasGroupBehavior } from "../../../../types/behaviors";
 import { hasPositionChanged, hasSizeChanged } from "../../../../core/geometry/comparators";
 import { hasNodeIdentityChanged, hasNodeStateChanged } from "../../../../core/node/comparators";
+import { createPortKey } from "../../../../core/port/identity/key";
 
 /**
  * Custom equality function for nodes that ignores position changes during drag
@@ -89,12 +90,12 @@ export function useSortedNodes(nodes: Record<NodeId, Node>, nodeDefinitions: Nod
 /**
  * Memoized connected ports calculation
  */
-export function useConnectedPorts(connections: Record<ConnectionId, Connection>): Set<PortId> {
+export function useConnectedPorts(connections: Record<ConnectionId, Connection>): Set<string> {
   return React.useMemo(() => {
-    const connectedPorts = new Set<PortId>();
+    const connectedPorts = new Set<string>();
     Object.values(connections).forEach((connection) => {
-      connectedPorts.add(connection.fromPortId);
-      connectedPorts.add(connection.toPortId);
+      connectedPorts.add(createPortKey(connection.fromNodeId, connection.fromPortId));
+      connectedPorts.add(createPortKey(connection.toNodeId, connection.toPortId));
     });
     return connectedPorts;
   }, [connections]);

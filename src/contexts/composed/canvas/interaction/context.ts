@@ -103,6 +103,7 @@ export type CanvasInteractionActionsValue = {
   dispatch: React.Dispatch<CanvasInteractionAction>;
   actions: BoundActionCreators<typeof canvasInteractionActions>;
   actionCreators: typeof canvasInteractionActions;
+  getState: () => CanvasInteractionState;
 };
 
 export type CanvasInteractionContextValue = CanvasInteractionActionsValue & {
@@ -112,6 +113,24 @@ export type CanvasInteractionContextValue = CanvasInteractionActionsValue & {
 // Split contexts for performance optimization
 const CanvasInteractionStateContext = React.createContext<CanvasInteractionState | null>(null);
 CanvasInteractionStateContext.displayName = "CanvasInteractionStateContext";
+
+const CanvasInteractionDragStateContext = React.createContext<DragState | null | undefined>(undefined);
+CanvasInteractionDragStateContext.displayName = "CanvasInteractionDragStateContext";
+
+export type ConnectionDragMeta = {
+  fromPort: BasePort;
+  candidatePortId: string | null;
+  candidatePortNodeId: NodeId | null;
+};
+
+const CanvasInteractionConnectionDragMetaContext = React.createContext<ConnectionDragMeta | null | undefined>(undefined);
+CanvasInteractionConnectionDragMetaContext.displayName = "CanvasInteractionConnectionDragMetaContext";
+
+const CanvasInteractionResizeStateContext = React.createContext<ResizeState | null | undefined>(undefined);
+CanvasInteractionResizeStateContext.displayName = "CanvasInteractionResizeStateContext";
+
+const CanvasInteractionConnectionDisconnectActiveContext = React.createContext<boolean | undefined>(undefined);
+CanvasInteractionConnectionDisconnectActiveContext.displayName = "CanvasInteractionConnectionDisconnectActiveContext";
 
 const CanvasInteractionActionsContext = React.createContext<CanvasInteractionActionsValue | null>(null);
 CanvasInteractionActionsContext.displayName = "CanvasInteractionActionsContext";
@@ -130,6 +149,40 @@ export const useCanvasInteractionState = (): CanvasInteractionState => {
   const state = React.useContext(CanvasInteractionStateContext);
   if (!state) {
     throw new Error("useCanvasInteractionState must be used within a CanvasInteractionProvider");
+  }
+  return state;
+};
+
+export const useCanvasInteractionDragState = (): DragState | null => {
+  const state = React.useContext(CanvasInteractionDragStateContext);
+  if (state === undefined) {
+    throw new Error("useCanvasInteractionDragState must be used within a CanvasInteractionProvider");
+  }
+  return state;
+};
+
+export const useCanvasInteractionConnectionDragMeta = (): ConnectionDragMeta | null => {
+  const state = React.useContext(CanvasInteractionConnectionDragMetaContext);
+  if (state === undefined) {
+    throw new Error("useCanvasInteractionConnectionDragMeta must be used within a CanvasInteractionProvider");
+  }
+  return state;
+};
+
+export const useCanvasInteractionResizeState = (): ResizeState | null => {
+  const state = React.useContext(CanvasInteractionResizeStateContext);
+  if (state === undefined) {
+    throw new Error("useCanvasInteractionResizeState must be used within a CanvasInteractionProvider");
+  }
+  return state;
+};
+
+export const useCanvasInteractionConnectionDisconnectActive = (): boolean => {
+  const state = React.useContext(CanvasInteractionConnectionDisconnectActiveContext);
+  if (state === undefined) {
+    throw new Error(
+      "useCanvasInteractionConnectionDisconnectActive must be used within a CanvasInteractionProvider",
+    );
   }
   return state;
 };
@@ -160,7 +213,14 @@ export const useCanvasInteraction = (): CanvasInteractionContextValue => {
 };
 
 // Export the split contexts for use in provider
-export { CanvasInteractionStateContext, CanvasInteractionActionsContext };
+export {
+  CanvasInteractionStateContext,
+  CanvasInteractionDragStateContext,
+  CanvasInteractionConnectionDragMetaContext,
+  CanvasInteractionResizeStateContext,
+  CanvasInteractionConnectionDisconnectActiveContext,
+  CanvasInteractionActionsContext,
+};
 
 // ============================================================================
 // Derived State Hooks
@@ -179,11 +239,10 @@ export type DragNodeIdsSets = {
 };
 
 export const useDragNodeIdsSets = (): DragNodeIdsSets | null => {
-  const state = React.useContext(CanvasInteractionStateContext);
-  if (!state) {
+  const dragState = React.useContext(CanvasInteractionDragStateContext);
+  if (dragState === undefined) {
     throw new Error("useDragNodeIdsSets must be used within a CanvasInteractionProvider");
   }
-  const { dragState } = state;
   return React.useMemo(() => {
     if (!dragState) {
       return null;

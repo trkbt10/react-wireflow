@@ -238,6 +238,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
   }, [state.nodes, groupNodeTypes]);
 
   const connectedPorts = useConnectedPorts(state.connections);
+  const getState = React.useCallback(() => stateRef.current, []);
 
   const getNodeById = React.useCallback(
     (nodeId: NodeId) => {
@@ -277,6 +278,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
   const contextValue = React.useMemo(
     () => ({
       state,
+      getState,
       dispatch,
       actions: boundActions,
       actionCreators: nodeEditorActions,
@@ -295,6 +297,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
     }),
     [
       state,
+      getState,
       dispatch,
       boundActions,
       isLoading,

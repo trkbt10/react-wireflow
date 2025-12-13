@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
-import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
+import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasActions, useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
@@ -21,8 +21,8 @@ import { createEmptyConnectablePorts } from "../../../core/port/connectivity/con
 
 export const useNodeLayerPorts = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
-  const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
-  const { state: nodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
+  const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
+  const { getState: getNodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
   const { containerRef } = useNodeCanvasActions();
   const utils = useNodeCanvasUtils();
   const { calculateNodePortPositions } = usePortPositions();
@@ -32,11 +32,17 @@ export const useNodeLayerPorts = () => {
     useConnectionOperations();
 
   const portDragStartRef = React.useRef<{ x: number; y: number; port: Port; hasConnection: boolean } | null>(null);
+  const getInteractionStateRef = React.useRef(getInteractionState);
+  getInteractionStateRef.current = getInteractionState;
+  const getNodeEditorStateRef = React.useRef(getNodeEditorState);
+  getNodeEditorStateRef.current = getNodeEditorState;
+  const lastHoveredPortIdRef = React.useRef<string | null>(null);
 
   const handlePortPointerDown = React.useEffectEvent((event: React.PointerEvent, port: Port) => {
     event.stopPropagation();
 
-    const node = nodeEditorState.nodes[port.nodeId];
+    const editorState = getNodeEditorStateRef.current();
+    const node = editorState.nodes[port.nodeId];
     if (!node) {
       return;
     }
@@ -49,7 +55,7 @@ export const useNodeLayerPorts = () => {
     const portPositionData = positions.get(port.id);
     const portPosition = portPositionData?.connectionPoint || { x: node.position.x, y: node.position.y };
 
-    const existingConnections = getPortConnections(port, nodeEditorState.connections);
+    const existingConnections = getPortConnections(port, editorState.connections);
 
     portDragStartRef.current = {
       x: event.clientX,
@@ -68,8 +74,8 @@ export const useNodeLayerPorts = () => {
       interactionActions.updateConnectionDrag(portPosition, null);
       const connectable = computeConnectablePortIds({
         fallbackPort: actionPort,
-        nodes: nodeEditorState.nodes,
-        connections: nodeEditorState.connections,
+        nodes: editorState.nodes,
+        connections: editorState.connections,
         getNodePorts,
         getNodeDefinition: (type: string) => registry.get(type),
       });
@@ -79,7 +85,7 @@ export const useNodeLayerPorts = () => {
 
     const startDisconnect = () => {
       const connection = existingConnections[0];
-      const portInfo = getOtherPortInfo(connection, port, nodeEditorState.nodes, getNodePorts);
+      const portInfo = getOtherPortInfo(connection, port, editorState.nodes, getNodePorts);
 
       if (!portInfo) {
         return;
@@ -109,8 +115,8 @@ export const useNodeLayerPorts = () => {
 
       const disconnectConnectable = computeConnectablePortIds({
         disconnectState,
-        nodes: nodeEditorState.nodes,
-        connections: nodeEditorState.connections,
+        nodes: editorState.nodes,
+        connections: editorState.connections,
         getNodePorts,
         getNodeDefinition: (type: string) => registry.get(type),
       });
@@ -165,6 +171,7 @@ export const useNodeLayerPorts = () => {
 
     // Use candidatePort from drag state instead of DOM event target port
     // This ensures snap distance equals connection range
+    const interactionState = getInteractionStateRef.current();
     if (interactionState.connectionDisconnectState) {
       const candidatePort = interactionState.connectionDisconnectState.candidatePort;
       if (candidatePort) {
@@ -195,22 +202,12 @@ export const useNodeLayerPorts = () => {
     const candidate =
       resolveCandidatePort(canvasPosition) || resolveDisconnectCandidate(canvasPosition) || fallbackPort;
 
+    const candidateId = candidate?.id ?? null;
+    if (candidateId === lastHoveredPortIdRef.current) {
+      return;
+    }
+    lastHoveredPortIdRef.current = candidateId;
     actionActions.setHoveredPort(candidate);
-    // Use the drag/disconnect source port for computing connectable ports, not the candidate.
-    // The candidate may be a destination port (e.g., input) which would incorrectly
-    // calculate output ports as connectable when we're dragging from an output port.
-    const sourcePort =
-      interactionState.connectionDragState?.fromPort ?? interactionState.connectionDisconnectState?.fixedPort ?? fallbackPort;
-    const connectable = computeConnectablePortIds({
-      dragState: interactionState.connectionDragState,
-      disconnectState: interactionState.connectionDisconnectState,
-      fallbackPort: sourcePort,
-      nodes: nodeEditorState.nodes,
-      connections: nodeEditorState.connections,
-      getNodePorts,
-      getNodeDefinition: (type: string) => registry.get(type),
-    });
-    actionActions.updateConnectablePorts(connectable);
   });
 
   const handlePortPointerEnter = React.useEffectEvent((event: React.PointerEvent, port: Port) => {
@@ -218,6 +215,7 @@ export const useNodeLayerPorts = () => {
   });
 
   const handlePortPointerMove = React.useEffectEvent((event: React.PointerEvent, port: Port) => {
+    const interactionState = getInteractionStateRef.current();
     if (!interactionState.connectionDragState && !interactionState.connectionDisconnectState) {
       return;
     }
@@ -226,6 +224,8 @@ export const useNodeLayerPorts = () => {
 
   const handlePortPointerLeave = React.useEffectEvent(() => {
     actionActions.setHoveredPort(null);
+    lastHoveredPortIdRef.current = null;
+    const interactionState = getInteractionStateRef.current();
     if (!interactionState.connectionDragState) {
       actionActions.updateConnectablePorts(createEmptyConnectablePorts());
     }

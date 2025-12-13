@@ -10,7 +10,7 @@ import {
   type ActionUnion,
   type BoundActionCreators,
 } from "../../utils/typedActions";
-import { NodeId, ConnectionId, PortId, Position, Port as BasePort, ContextMenuState } from "../../types/core";
+import { NodeId, ConnectionId, Position, Port as BasePort, ContextMenuState } from "../../types/core";
 import { useNodeEditor, useNodeEditorActions } from "./node-editor/context";
 import { useNodeDefinitionList } from "../node-definitions/hooks/useNodeDefinitionList";
 import { canAddNodeType, countNodesByType } from "../node-definitions/utils/nodeTypeLimits";
@@ -46,7 +46,7 @@ export type EditorActionState = {
   hoveredNodeId: NodeId | null;
   hoveredConnectionId: ConnectionId | null;
   hoveredPort: BasePort | null;
-  connectedPorts: Set<PortId>;
+  connectedPorts: Set<string>;
   connectablePorts: ConnectablePortsResult;
   contextMenu: ContextMenuState;
   inspectorActiveTab: number;
@@ -75,7 +75,7 @@ export const editorActionStateActions = {
     connectionId,
   })),
   setHoveredPort: createAction("SET_HOVERED_PORT", (port: BasePort | null) => ({ port })),
-  updateConnectedPorts: createAction("UPDATE_CONNECTED_PORTS", (connectedPorts: Set<PortId>) => ({ connectedPorts })),
+  updateConnectedPorts: createAction("UPDATE_CONNECTED_PORTS", (connectedPorts: Set<string>) => ({ connectedPorts })),
   updateConnectablePorts: createAction("UPDATE_CONNECTABLE_PORTS", (connectablePorts: ConnectablePortsResult) => ({
     connectablePorts,
   })),
@@ -237,7 +237,7 @@ export const defaultEditorActionState: EditorActionState = {
   hoveredNodeId: null,
   hoveredConnectionId: null,
   hoveredPort: null,
-  connectedPorts: new Set<PortId>(),
+  connectedPorts: new Set<string>(),
   connectablePorts: createEmptyConnectablePorts(),
   contextMenu: {
     visible: false,

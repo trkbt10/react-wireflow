@@ -155,3 +155,11 @@ export const useNodeCanvas = (): NodeCanvasContextValue => {
     state,
   };
 };
+
+export const useNodeCanvasApi = (): NodeCanvasApiValue => {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
+    throw new Error("useNodeCanvasApi must be used within a NodeCanvasProvider");
+  }
+  return context;
+};

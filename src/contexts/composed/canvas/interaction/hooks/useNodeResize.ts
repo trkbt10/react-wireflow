@@ -4,8 +4,8 @@
 import * as React from "react";
 import { useNodeEditor } from "../../../node-editor/context";
 import { useEditorActionState } from "../../../EditorActionStateContext";
-import { useNodeCanvas } from "../../viewport/context";
-import { useCanvasInteraction } from "../context";
+import { useNodeCanvasViewportScale } from "../../viewport/context";
+import { useCanvasInteractionActions, useCanvasInteractionResizeState } from "../context";
 import type { Position, ResizeHandle, Size } from "../../../../../types/core";
 
 export type UseNodeResizeOptions = {
@@ -45,10 +45,22 @@ export type UseNodeResizeResult = {
 export const useNodeResize = (options: UseNodeResizeOptions = {}): UseNodeResizeResult => {
   const { actions: nodeEditorActions } = useNodeEditor();
   const { actions: _actionActions } = useEditorActionState();
-  const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
-  const { state: canvasState } = useNodeCanvas();
+  const resizeState = useCanvasInteractionResizeState();
+  const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
+  const viewportScale = useNodeCanvasViewportScale();
 
   const { minWidth = 100, minHeight = 40, snapToGrid = false, gridSize = 20 } = options;
+  const resizeStateRef = React.useRef(resizeState);
+  const interactionActionsRef = React.useRef(interactionActions);
+  const getInteractionStateRef = React.useRef(getInteractionState);
+  const nodeEditorActionsRef = React.useRef(nodeEditorActions);
+  const viewportScaleRef = React.useRef(viewportScale);
+
+  resizeStateRef.current = resizeState;
+  interactionActionsRef.current = interactionActions;
+  getInteractionStateRef.current = getInteractionState;
+  nodeEditorActionsRef.current = nodeEditorActions;
+  viewportScaleRef.current = viewportScale;
 
   // Calculate new size and position based on handle direction and deltas
   const calculateResize = React.useCallback(
@@ -126,37 +138,41 @@ export const useNodeResize = (options: UseNodeResizeOptions = {}): UseNodeResize
 
   // Handle resize operations
   React.useEffect(() => {
-    if (!interactionState.resizeState) {
+    if (!resizeState) {
       return;
     }
 
-    const { startPosition, startSize, handle, startNodePosition } = interactionState.resizeState;
+    const current = resizeStateRef.current;
+    if (!current) {
+      return;
+    }
+    const { startPosition, startSize, handle, startNodePosition } = current;
 
     const handlePointerMove = (e: PointerEvent) => {
-      const deltaX = (e.clientX - startPosition.x) / canvasState.viewport.scale;
-      const deltaY = (e.clientY - startPosition.y) / canvasState.viewport.scale;
+      const scale = viewportScaleRef.current;
+      const deltaX = (e.clientX - startPosition.x) / scale;
+      const deltaY = (e.clientY - startPosition.y) / scale;
 
       const { size, position } = calculateResize(handle, startSize, startNodePosition, deltaX, deltaY);
-      interactionActions.updateNodeResize(size, position);
+      interactionActionsRef.current.updateNodeResize(size, position);
     };
 
     const handlePointerUp = (_e: PointerEvent) => {
-      if (interactionState.resizeState) {
-        // Apply the final size to the node
-        const { nodeId, currentSize, currentPosition } = interactionState.resizeState;
-        nodeEditorActions.updateNode(nodeId, {
-          size: currentSize,
-          position: currentPosition,
+      const latest = getInteractionStateRef.current().resizeState;
+      if (latest) {
+        nodeEditorActionsRef.current.updateNode(latest.nodeId, {
+          size: latest.currentSize,
+          position: latest.currentPosition,
         });
       }
 
-      interactionActions.endNodeResize();
+      interactionActionsRef.current.endNodeResize();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         // Cancel resize operation
-        interactionActions.endNodeResize();
+        interactionActionsRef.current.endNodeResize();
       }
     };
 
@@ -169,7 +185,7 @@ export const useNodeResize = (options: UseNodeResizeOptions = {}): UseNodeResize
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [interactionState.resizeState, calculateResize, interactionActions, nodeEditorActions, canvasState.viewport.scale]);
+  }, [resizeState?.nodeId, calculateResize]);
 
   const startResize = React.useCallback(
     (
@@ -186,30 +202,30 @@ export const useNodeResize = (options: UseNodeResizeOptions = {}): UseNodeResize
 
   const isResizing = React.useCallback(
     (nodeId: string) => {
-      return interactionState.resizeState?.nodeId === nodeId;
+      return resizeState?.nodeId === nodeId;
     },
-    [interactionState.resizeState],
+    [resizeState],
   );
 
   const getResizeHandle = React.useCallback(
     (nodeId: string) => {
-      return interactionState.resizeState?.nodeId === nodeId ? interactionState.resizeState.handle : null;
+      return resizeState?.nodeId === nodeId ? resizeState.handle : null;
     },
-    [interactionState.resizeState],
+    [resizeState],
   );
 
   const getCurrentSize = React.useCallback(
     (nodeId: string) => {
-      return interactionState.resizeState?.nodeId === nodeId ? interactionState.resizeState.currentSize : null;
+      return resizeState?.nodeId === nodeId ? resizeState.currentSize : null;
     },
-    [interactionState.resizeState],
+    [resizeState],
   );
 
   const getCurrentPosition = React.useCallback(
     (nodeId: string) => {
-      return interactionState.resizeState?.nodeId === nodeId ? interactionState.resizeState.currentPosition : null;
+      return resizeState?.nodeId === nodeId ? resizeState.currentPosition : null;
     },
-    [interactionState.resizeState],
+    [resizeState],
   );
 
   return {

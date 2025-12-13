@@ -10,7 +10,7 @@ import { useNodeEditor } from "../../contexts/composed/node-editor/context";
 import { useNodeDefinition } from "../../contexts/node-definitions/hooks/useNodeDefinition";
 import { useExternalDataRef } from "../../contexts/external-data/ExternalDataContext";
 import { useExternalData } from "../../contexts/external-data/useExternalData";
-import { useCanvasInteraction } from "../../contexts/composed/canvas/interaction/context";
+import { useCanvasInteractionActions, useCanvasInteractionResizeState } from "../../contexts/composed/canvas/interaction/context";
 import { useGroupManagement } from "../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { computeNodeDerivedState } from "../../core/node/nodeState";
 import { hasGroupBehavior } from "../../types/behaviors";
@@ -65,7 +65,8 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
   // Use split hooks for better performance
   const editingState = useInlineEditingState();
   const { isEditing, startEditing, updateValue, confirmEdit, cancelEdit } = useInlineEditingActions();
-  const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
+  const { actions: interactionActions } = useCanvasInteractionActions();
+  const resizeState = useCanvasInteractionResizeState();
   const groupManager = useGroupManagement({ autoUpdateMembership: false });
   const nodeDefinition = useNodeDefinition(node.type);
   const externalDataRef = useExternalDataRef(node.id);
@@ -82,12 +83,12 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
     return computeNodeDerivedState(
       node,
       nodeDefinition,
-      interactionState.resizeState,
+      resizeState,
       dragOffset,
       isDragging,
       groupChildren.length,
     );
-  }, [node, nodeDefinition, interactionState.resizeState, dragOffset, isDragging, groupChildren.length]);
+  }, [node, nodeDefinition, resizeState, dragOffset, isDragging, groupChildren.length]);
 
   // Whether this node has an unknown/unregistered type
   const isUnknownType = nodeDefinition === undefined;

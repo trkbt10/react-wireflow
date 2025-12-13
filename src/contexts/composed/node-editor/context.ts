@@ -2,7 +2,7 @@
  * @file Node editor context type definitions and hook for accessing editor state and utilities
  */
 import * as React from "react";
-import type { Node, NodeEditorData, NodeId, Port, Position, GridSettings, PortId } from "../../../types/core";
+import type { Node, NodeEditorData, NodeId, Port, Position, GridSettings } from "../../../types/core";
 import { nodeEditorActions } from "./actions";
 import type { NodeEditorAction } from "./actions";
 import type { BoundActionCreators } from "../../../utils/typedActions";
@@ -31,6 +31,11 @@ export type NodeEditorUtils = {
 
 export type NodeEditorContextValue = {
   state: NodeEditorData;
+  /**
+   * Returns the latest state reference synchronously, even before React commits a render.
+   * Useful for pointer handlers that must reflect immediate results (e.g. disconnect → reconnect).
+   */
+  getState: () => NodeEditorData;
   dispatch: React.Dispatch<NodeEditorAction>;
   actions: BoundActionCreators<typeof nodeEditorActions>;
   actionCreators: typeof nodeEditorActions;
@@ -40,10 +45,10 @@ export type NodeEditorContextValue = {
    */
   sortedNodes: Node[];
   /**
-   * Set of port IDs that are part of any connection.
+   * Set of port keys ("nodeId:portId") that are part of any connection.
    * Do not mutate.
    */
-  connectedPorts: Set<PortId>;
+  connectedPorts: Set<string>;
   isLoading: boolean;
   isSaving: boolean;
   handleSave: () => Promise<void>;

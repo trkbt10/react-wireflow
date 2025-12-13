@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useEditorActionState } from "../../composed/EditorActionStateContext";
-import { useCanvasInteraction } from "../../composed/canvas/interaction/context";
+import { useCanvasInteractionActions } from "../../composed/canvas/interaction/context";
 import { useNodeDefinitions } from "../../node-definitions/context";
 import { useNodeEditor } from "../../composed/node-editor/context";
 import { createValidatedConnection } from "../../../core/connection/operations";
@@ -16,13 +16,29 @@ import { createEmptyConnectablePorts } from "../../../core/port/connectivity/con
 
 export const useConnectionOperations = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
-  const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
+  const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
   const { state: nodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
   const { registry } = useNodeDefinitions();
 
+  const getInteractionStateRef = React.useRef(getInteractionState);
+  const nodeEditorStateRef = React.useRef(nodeEditorState);
+  const nodeEditorActionsRef = React.useRef(nodeEditorActions);
+  const getNodePortsRef = React.useRef(getNodePorts);
+  const registryRef = React.useRef(registry);
+  const interactionActionsRef = React.useRef(interactionActions);
+  const actionActionsRef = React.useRef(actionActions);
+
+  getInteractionStateRef.current = getInteractionState;
+  nodeEditorStateRef.current = nodeEditorState;
+  nodeEditorActionsRef.current = nodeEditorActions;
+  getNodePortsRef.current = getNodePorts;
+  registryRef.current = registry;
+  interactionActionsRef.current = interactionActions;
+  actionActionsRef.current = actionActions;
+
   const completeDisconnectDrag = React.useCallback(
     (targetPort: Port): boolean => {
-      const disconnectState = interactionState.connectionDisconnectState;
+      const disconnectState = getInteractionStateRef.current().connectionDisconnectState;
       if (!disconnectState) {
         return false;
       }
@@ -37,33 +53,27 @@ export const useConnectionOperations = () => {
       const newConnection = createValidatedConnection(
         fixedPort,
         targetPort,
-        nodeEditorState.nodes,
-        nodeEditorState.connections,
-        (type: string) => registry.get(type),
+        nodeEditorStateRef.current.nodes,
+        nodeEditorStateRef.current.connections,
+        (type: string) => registryRef.current.get(type),
       );
       if (!newConnection) {
         return false;
       }
-      nodeEditorActions.addConnection(newConnection);
+      nodeEditorActionsRef.current.addConnection(newConnection);
       return true;
     },
-    [
-      interactionState.connectionDisconnectState,
-      nodeEditorState.nodes,
-      nodeEditorState.connections,
-      registry,
-      nodeEditorActions,
-    ],
+    [],
   );
 
   const completeConnectionDrag = React.useCallback(
     (targetPort: Port): boolean => {
-      const drag = interactionState.connectionDragState;
+      const drag = getInteractionStateRef.current().connectionDragState;
       if (!drag) {
         return false;
       }
       const resolveCurrentPort = (port: Port): Port => {
-        const current = getNodePorts(port.nodeId).find((candidate) => candidate.id === port.id);
+        const current = getNodePortsRef.current(port.nodeId).find((candidate) => candidate.id === port.id);
         return current ?? port;
       };
 
@@ -72,15 +82,15 @@ export const useConnectionOperations = () => {
       const plan = planConnectionChange({
         fromPort,
         toPort,
-        nodes: nodeEditorState.nodes,
-        connections: nodeEditorState.connections,
-        getNodeDefinition: (type: string) => registry.get(type),
+        nodes: nodeEditorStateRef.current.nodes,
+        connections: nodeEditorStateRef.current.connections,
+        getNodeDefinition: (type: string) => registryRef.current.get(type),
       });
 
       switch (plan.behavior) {
         case ConnectionSwitchBehavior.Append:
           if (plan.connection) {
-            nodeEditorActions.addConnection(plan.connection);
+            nodeEditorActionsRef.current.addConnection(plan.connection);
             return true;
           }
           break;
@@ -92,37 +102,32 @@ export const useConnectionOperations = () => {
       const fallbackConnection = createValidatedConnection(
         fromPort,
         toPort,
-        nodeEditorState.nodes,
-        nodeEditorState.connections,
-        (type: string) => registry.get(type),
+        nodeEditorStateRef.current.nodes,
+        nodeEditorStateRef.current.connections,
+        (type: string) => registryRef.current.get(type),
       );
 
       if (fallbackConnection) {
-        nodeEditorActions.addConnection(fallbackConnection);
+        nodeEditorActionsRef.current.addConnection(fallbackConnection);
         return true;
       }
 
       return false;
     },
-    [
-      interactionState.connectionDragState,
-      nodeEditorState.nodes,
-      nodeEditorState.connections,
-      registry,
-      nodeEditorActions,
-      getNodePorts,
-    ],
+    [],
   );
 
   const endConnectionDrag = React.useCallback(() => {
-    interactionActions.endConnectionDrag();
-    actionActions.updateConnectablePorts(createEmptyConnectablePorts());
-  }, [interactionActions, actionActions]);
+    interactionActionsRef.current.endConnectionDrag();
+    actionActionsRef.current.setHoveredPort(null);
+    actionActionsRef.current.updateConnectablePorts(createEmptyConnectablePorts());
+  }, []);
 
   const endConnectionDisconnect = React.useCallback(() => {
-    interactionActions.endConnectionDisconnect();
-    actionActions.updateConnectablePorts(createEmptyConnectablePorts());
-  }, [interactionActions, actionActions]);
+    interactionActionsRef.current.endConnectionDisconnect();
+    actionActionsRef.current.setHoveredPort(null);
+    actionActionsRef.current.updateConnectablePorts(createEmptyConnectablePorts());
+  }, []);
 
   return { completeConnectionDrag, completeDisconnectDrag, endConnectionDrag, endConnectionDisconnect };
 };

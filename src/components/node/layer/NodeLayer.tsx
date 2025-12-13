@@ -7,7 +7,8 @@ import {
   useSelectedNodeIdsSet,
 } from "../../../contexts/composed/EditorActionStateContext";
 import {
-  useCanvasInteractionState,
+  useCanvasInteractionConnectionDragMeta,
+  useCanvasInteractionDragState,
   useDragNodeIdsSets,
 } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
@@ -29,11 +30,12 @@ export type NodeLayerProps = {
 /**
  * NodeLayer - Renders all nodes with optimized performance
  */
-export const NodeLayer: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
+const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
   void doubleClickToEdit;
   const { sortedNodes, connectedPorts } = useNodeEditor();
   const { state: actionState, actions: actionActions } = useEditorActionState();
-  const interactionState = useCanvasInteractionState();
+  const dragState = useCanvasInteractionDragState();
+  const connectionDragMeta = useCanvasInteractionConnectionDragMeta();
   const gridSettings = useNodeCanvasGridSettings();
   const { node: NodeComponent } = useRenderers();
 
@@ -77,7 +79,6 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
   useNodeLayerConnections();
 
   const { hoveredPort, connectablePorts } = actionState;
-  const { dragState, connectionDragState } = interactionState;
 
   // Use shared memoized Sets from context
   const selectedNodeIdsSet = useSelectedNodeIdsSet();
@@ -90,6 +91,14 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
         const isDirectlyDragging = dragNodeIdsSets?.directlyDraggedNodeIds.has(node.id) ?? false;
         const isInDragState = isDirectlyDragging || (dragNodeIdsSets?.affectedChildNodeIds.has(node.id) ?? false);
         const dragOffset = isInDragState && dragState ? dragState.offset : undefined;
+
+        const hoveredPortForNode = hoveredPort?.nodeId === node.id ? hoveredPort : undefined;
+
+        const connectingPortForNode =
+          connectionDragMeta?.fromPort.nodeId === node.id ? connectionDragMeta.fromPort : undefined;
+
+        const candidatePortIdForNode =
+          connectionDragMeta?.candidatePortNodeId === node.id ? connectionDragMeta.candidatePortId ?? undefined : undefined;
 
         return (
           <NodeComponent
@@ -107,15 +116,17 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
             onPortPointerLeave={handlePortPointerLeave}
             onPortPointerCancel={handlePortPointerCancel}
             connectablePorts={connectablePorts}
-            connectingPort={connectionDragState?.fromPort}
-            hoveredPort={hoveredPort ?? undefined}
+            connectingPort={connectingPortForNode}
+            hoveredPort={hoveredPortForNode}
             connectedPorts={connectedPorts}
-            candidatePortId={connectionDragState?.candidatePort?.id}
+            candidatePortId={candidatePortIdForNode}
           />
         );
       })}
     </div>
   );
 };
+
+export const NodeLayer = React.memo(NodeLayerComponent);
 
 NodeLayer.displayName = "NodeLayer";

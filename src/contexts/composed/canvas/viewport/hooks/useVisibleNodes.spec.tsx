@@ -1,7 +1,7 @@
 /**
  * @file Tests for useVisibleNodes - validates viewBox-based visibility filtering.
  */
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { useEffect, type FC } from "react";
 import type { Node } from "../../../../../types/core";
 import { useVisibleNodes } from "./useVisibleNodes";
@@ -38,12 +38,15 @@ const Harness: FC = () => {
 };
 
 describe("useVisibleNodes", () => {
-  it("uses canvas viewBox (not window) for visibility", () => {
+  it("uses canvas viewBox (not window) for visibility", async () => {
     const { getByTestId } = render(
       <NodeCanvasProvider>
         <Harness />
       </NodeCanvasProvider>,
     );
+    await act(async () => {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    });
     expect(getByTestId("ids").textContent).toBe("a");
   });
 });

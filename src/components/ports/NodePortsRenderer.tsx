@@ -8,6 +8,7 @@ import { isPortConnectable } from "../../core/port/connectivity/connectableTypes
 import { PortView } from "./PortView";
 import { useOptionalRenderers } from "../../contexts/RendererContext";
 import { hasPortIdChanged } from "../../core/port/identity/comparators";
+import { createPortKey } from "../../core/port/identity/key";
 import styles from "./NodePortsRenderer.module.css";
 
 export type NodePortsRendererProps = {
@@ -67,7 +68,7 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
             isConnectable={connectable}
             isCandidate={candidatePortId === port.id}
             isHovered={hoveredPort?.id === port.id}
-            isConnected={connectedPorts?.has(port.id)}
+            isConnected={connectedPorts?.has(createPortKey(port.nodeId, port.id))}
           />
         );
       })}

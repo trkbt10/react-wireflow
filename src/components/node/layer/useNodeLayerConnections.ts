@@ -3,7 +3,11 @@
  */
 import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
-import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
+import {
+  useCanvasInteractionActions,
+  useCanvasInteractionConnectionDisconnectActive,
+  useCanvasInteractionConnectionDragMeta,
+} from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
@@ -11,56 +15,132 @@ import { getConnectableNodeTypes } from "../../../core/port/connectivity/connect
 import { useConnectionPortResolvers } from "../../../contexts/node-ports/hooks/useConnectionPortResolvers";
 import { useConnectionOperations } from "../../../contexts/node-ports/hooks/useConnectionOperations";
 import { useRafThrottledCallback } from "../../../hooks/useRafThrottledCallback";
+import type { Port, Position } from "../../../types/core";
+import { computeConnectablePortIds } from "../../../core/port/connectivity/planner";
+import { findNearestConnectablePort } from "../../../core/port/connectivity/candidate";
+import { usePortPositions } from "../../../contexts/node-ports/context";
 
 export const useNodeLayerConnections = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
-  const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
-  const { state: nodeEditorState } = useNodeEditor();
+  const connectionDragMeta = useCanvasInteractionConnectionDragMeta();
+  const isDisconnecting = useCanvasInteractionConnectionDisconnectActive();
+  const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
+  const { state: nodeEditorState, getState: getNodeEditorState, getNodePorts } = useNodeEditor();
   const utils = useNodeCanvasUtils();
   const { registry } = useNodeDefinitions();
   const { resolveCandidatePort, resolveDisconnectCandidate } = useConnectionPortResolvers();
   const { completeConnectionDrag, completeDisconnectDrag, endConnectionDrag, endConnectionDisconnect } =
     useConnectionOperations();
+  const { getPortPosition, computePortPosition } = usePortPositions();
 
   // Connection drag handling
-  const handleConnectionDragMove = React.useEffectEvent(
-    (payload: { canvasPosition: { x: number; y: number }; event: PointerEvent }) => {
-      const candidate = resolveCandidatePort(payload.canvasPosition);
-      interactionActions.updateConnectionDrag(payload.canvasPosition, candidate);
+  const resolveCandidatePortRef = React.useRef(resolveCandidatePort);
+  const resolveDisconnectCandidateRef = React.useRef(resolveDisconnectCandidate);
+  const interactionActionsRef = React.useRef(interactionActions);
+  const getInteractionStateRef = React.useRef(getInteractionState);
+  const completeConnectionDragRef = React.useRef(completeConnectionDrag);
+  const completeDisconnectDragRef = React.useRef(completeDisconnectDrag);
+  const endConnectionDragRef = React.useRef(endConnectionDrag);
+  const endConnectionDisconnectRef = React.useRef(endConnectionDisconnect);
+  const actionActionsRef = React.useRef(actionActions);
+  const nodeEditorStateRef = React.useRef(nodeEditorState);
+  const getNodeEditorStateRef = React.useRef(getNodeEditorState);
+  const getNodePortsRef = React.useRef(getNodePorts);
+  const utilsRef = React.useRef(utils);
+  const registryRef = React.useRef(registry);
+  const getPortPositionRef = React.useRef(getPortPosition);
+  const computePortPositionRef = React.useRef(computePortPosition);
+
+  resolveCandidatePortRef.current = resolveCandidatePort;
+  resolveDisconnectCandidateRef.current = resolveDisconnectCandidate;
+  interactionActionsRef.current = interactionActions;
+  getInteractionStateRef.current = getInteractionState;
+  completeConnectionDragRef.current = completeConnectionDrag;
+  completeDisconnectDragRef.current = completeDisconnectDrag;
+  endConnectionDragRef.current = endConnectionDrag;
+  endConnectionDisconnectRef.current = endConnectionDisconnect;
+  actionActionsRef.current = actionActions;
+  nodeEditorStateRef.current = nodeEditorState;
+  getNodeEditorStateRef.current = getNodeEditorState;
+  getNodePortsRef.current = getNodePorts;
+  utilsRef.current = utils;
+  registryRef.current = registry;
+  getPortPositionRef.current = getPortPosition;
+  computePortPositionRef.current = computePortPosition;
+
+  const resolveConnectionPoint = React.useCallback((nodeId: string, portId: string) => {
+    const stored = getPortPositionRef.current(nodeId, portId);
+    if (stored) {
+      return stored.connectionPoint;
+    }
+    const editorState = getNodeEditorStateRef.current();
+    const node = editorState.nodes[nodeId];
+    if (!node) {
+      return null;
+    }
+    const definition = registryRef.current.get(node.type);
+    if (!definition) {
+      return null;
+    }
+    const ports = getNodePortsRef.current(nodeId);
+    const targetPort = ports.find((candidate) => candidate.id === portId);
+    if (!targetPort) {
+      return null;
+    }
+    const computed = computePortPositionRef.current({ ...node, ports }, targetPort);
+    return computed.connectionPoint;
+  }, []);
+
+  const resolveCandidateFallback = React.useCallback(
+    (canvasPosition: Position, fromPort: Port) => {
+      const editorState = getNodeEditorStateRef.current();
+      const reg = registryRef.current;
+      const connectablePorts = computeConnectablePortIds({
+        fallbackPort: fromPort,
+        nodes: editorState.nodes,
+        connections: editorState.connections,
+        getNodePorts: getNodePortsRef.current,
+        getNodeDefinition: (type: string) => reg.get(type),
+      });
+      return findNearestConnectablePort({
+        pointerCanvasPosition: canvasPosition,
+        connectablePorts,
+        nodes: editorState.nodes,
+        getNodePorts: getNodePortsRef.current,
+        getConnectionPoint: resolveConnectionPoint,
+        excludePort: { nodeId: fromPort.nodeId, portId: fromPort.id },
+      });
     },
+    [resolveConnectionPoint],
   );
 
-  const handleConnectionDragUp = React.useEffectEvent(() => {
-    const drag = interactionState.connectionDragState;
-    if (!drag) {
-      endConnectionDrag();
-      return;
-    }
-    const { fromPort, candidatePort, toPosition } = drag;
-    if (candidatePort && fromPort.id !== candidatePort.id && completeConnectionDrag(candidatePort)) {
-      endConnectionDrag();
-      return;
-    }
+  const resolveDisconnectFallback = React.useCallback(
+    (canvasPosition: Position, fixedPort: Port) => {
+      const editorState = getNodeEditorStateRef.current();
+      const reg = registryRef.current;
+      const connectablePorts = computeConnectablePortIds({
+        fallbackPort: fixedPort,
+        nodes: editorState.nodes,
+        connections: editorState.connections,
+        getNodePorts: getNodePortsRef.current,
+        getNodeDefinition: (type: string) => reg.get(type),
+      });
+      return findNearestConnectablePort({
+        pointerCanvasPosition: canvasPosition,
+        connectablePorts,
+        nodes: editorState.nodes,
+        getNodePorts: getNodePortsRef.current,
+        getConnectionPoint: resolveConnectionPoint,
+        excludePort: { nodeId: fixedPort.nodeId, portId: fixedPort.id },
+      });
+    },
+    [resolveConnectionPoint],
+  );
 
-    if (!candidatePort || fromPort.id === candidatePort.id) {
-      const screen = utils.canvasToScreen(toPosition.x, toPosition.y);
-      const allowed = getConnectableNodeTypes({
-        fromPort,
-        nodes: nodeEditorState.nodes,
-        connections: nodeEditorState.connections,
-        getNodeDefinition: (type: string) => registry.get(type),
-        getAllNodeDefinitions: () => registry.getAll(),
-      });
-      actionActions.showContextMenu({
-        position: { x: screen.x, y: screen.y },
-        canvasPosition: { x: toPosition.x, y: toPosition.y },
-        mode: "search",
-        allowedNodeTypes: allowed,
-        fromPort,
-      });
-    }
-    endConnectionDrag();
-  });
+  const handleConnectionDragMove = React.useCallback((canvasPosition: Position) => {
+    const candidate = resolveCandidatePortRef.current(canvasPosition);
+    interactionActionsRef.current.updateConnectionDrag(canvasPosition, candidate);
+  }, []);
 
   const { schedule: scheduleDragMove, cancel: cancelDragMove } = useRafThrottledCallback(handleConnectionDragMove);
   const scheduleDragMoveRef = React.useRef(scheduleDragMove);
@@ -68,22 +148,91 @@ export const useNodeLayerConnections = () => {
   scheduleDragMoveRef.current = scheduleDragMove;
   cancelDragMoveRef.current = cancelDragMove;
 
-  React.useEffect(() => {
-    if (!interactionState.connectionDragState) {
+  const handleConnectionDragUp = React.useCallback(() => {
+    const drag = getInteractionStateRef.current().connectionDragState;
+    if (!drag) {
+      endConnectionDragRef.current();
+      return;
+    }
+    const { fromPort, candidatePort, toPosition } = drag;
+    if (candidatePort && fromPort.id !== candidatePort.id && completeConnectionDragRef.current(candidatePort)) {
+      endConnectionDragRef.current();
+      return;
+    }
+
+    if (!candidatePort || fromPort.id === candidatePort.id) {
+      const screen = utilsRef.current.canvasToScreen(toPosition.x, toPosition.y);
+      const editorState = nodeEditorStateRef.current;
+      const reg = registryRef.current;
+      const allowed = getConnectableNodeTypes({
+        fromPort,
+        nodes: editorState.nodes,
+        connections: editorState.connections,
+        getNodeDefinition: (type: string) => reg.get(type),
+        getAllNodeDefinitions: () => reg.getAll(),
+      });
+      actionActionsRef.current.showContextMenu({
+        position: { x: screen.x, y: screen.y },
+        canvasPosition: { x: toPosition.x, y: toPosition.y },
+        mode: "search",
+        allowedNodeTypes: allowed,
+        fromPort,
+      });
+    }
+    endConnectionDragRef.current();
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!connectionDragMeta) {
       return;
     }
 
     const toCanvasPosition = (event: PointerEvent) => {
-      return utils.screenToCanvas(event.clientX, event.clientY);
+      return utilsRef.current.screenToCanvas(event.clientX, event.clientY);
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      scheduleDragMoveRef.current({ canvasPosition: toCanvasPosition(e), event: e });
+      scheduleDragMoveRef.current(toCanvasPosition(e));
     };
 
     const handlePointerUp = (e: PointerEvent) => {
-      scheduleDragMoveRef.current({ canvasPosition: toCanvasPosition(e), event: e }, { immediate: true });
-      handleConnectionDragUp();
+      const canvasPosition = toCanvasPosition(e);
+      // Keep preview state in sync, but don't rely on it being committed before completion.
+      scheduleDragMoveRef.current(canvasPosition, { immediate: true });
+
+      const drag = getInteractionStateRef.current().connectionDragState;
+      if (!drag) {
+        endConnectionDragRef.current();
+        return;
+      }
+
+      const resolvedCandidate = resolveCandidatePortRef.current(canvasPosition) ?? resolveCandidateFallback(canvasPosition, drag.fromPort);
+      if (resolvedCandidate && drag.fromPort.id !== resolvedCandidate.id && completeConnectionDragRef.current(resolvedCandidate)) {
+        endConnectionDragRef.current();
+        return;
+      }
+
+      if (!resolvedCandidate || drag.fromPort.id === resolvedCandidate.id) {
+        const screen = utilsRef.current.canvasToScreen(canvasPosition.x, canvasPosition.y);
+        const editorState = getNodeEditorStateRef.current();
+        const reg = registryRef.current;
+        const allowed = getConnectableNodeTypes({
+          fromPort: drag.fromPort,
+          nodes: editorState.nodes,
+          connections: editorState.connections,
+          getNodeDefinition: (type: string) => reg.get(type),
+          getAllNodeDefinitions: () => reg.getAll(),
+        });
+        actionActionsRef.current.showContextMenu({
+          position: { x: screen.x, y: screen.y },
+          canvasPosition: { x: canvasPosition.x, y: canvasPosition.y },
+          mode: "search",
+          allowedNodeTypes: allowed,
+          fromPort: drag.fromPort,
+        });
+      }
+
+      endConnectionDragRef.current();
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
@@ -96,47 +245,58 @@ export const useNodeLayerConnections = () => {
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
     };
-  }, [interactionState.connectionDragState, utils.screenToCanvas]);
+  }, [connectionDragMeta?.fromPort.id, handleConnectionDragUp]);
 
   // Connection disconnect handling
-  const handleDisconnectMove = React.useEffectEvent(
-    (payload: { canvasPosition: { x: number; y: number }; event: PointerEvent }) => {
-      const candidate = resolveDisconnectCandidate(payload.canvasPosition);
-      interactionActions.updateConnectionDisconnect(payload.canvasPosition, candidate);
-    },
-  );
+  const handleDisconnectMove = React.useCallback((canvasPosition: Position) => {
+    const candidate = resolveDisconnectCandidateRef.current(canvasPosition);
+    interactionActionsRef.current.updateConnectionDisconnect(canvasPosition, candidate);
+  }, []);
 
-  const handleDisconnectUp = React.useEffectEvent(() => {
-    const disconnectState = interactionState.connectionDisconnectState;
+  const handleDisconnectUp = React.useCallback(() => {
+    const disconnectState = getInteractionStateRef.current().connectionDisconnectState;
     if (disconnectState?.candidatePort) {
-      completeDisconnectDrag(disconnectState.candidatePort);
+      completeDisconnectDragRef.current(disconnectState.candidatePort);
     }
-    endConnectionDisconnect();
-  });
+    endConnectionDisconnectRef.current();
+  }, []);
 
-  const { schedule: scheduleDisconnectMove, cancel: cancelDisconnectMove } =
-    useRafThrottledCallback(handleDisconnectMove);
+  const { schedule: scheduleDisconnectMove, cancel: cancelDisconnectMove } = useRafThrottledCallback(handleDisconnectMove);
   const scheduleDisconnectMoveRef = React.useRef(scheduleDisconnectMove);
   const cancelDisconnectMoveRef = React.useRef(cancelDisconnectMove);
   scheduleDisconnectMoveRef.current = scheduleDisconnectMove;
   cancelDisconnectMoveRef.current = cancelDisconnectMove;
 
-  React.useEffect(() => {
-    if (!interactionState.connectionDisconnectState) {
+  React.useLayoutEffect(() => {
+    if (!isDisconnecting) {
       return;
     }
 
     const toCanvasPosition = (event: PointerEvent) => {
-      return utils.screenToCanvas(event.clientX, event.clientY);
+      return utilsRef.current.screenToCanvas(event.clientX, event.clientY);
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      scheduleDisconnectMoveRef.current({ canvasPosition: toCanvasPosition(e), event: e });
+      scheduleDisconnectMoveRef.current(toCanvasPosition(e));
     };
 
     const handlePointerUp = (e: PointerEvent) => {
-      scheduleDisconnectMoveRef.current({ canvasPosition: toCanvasPosition(e), event: e }, { immediate: true });
-      handleDisconnectUp();
+      const canvasPosition = toCanvasPosition(e);
+      scheduleDisconnectMoveRef.current(canvasPosition, { immediate: true });
+
+      const disconnectState = getInteractionStateRef.current().connectionDisconnectState;
+      if (!disconnectState) {
+        endConnectionDisconnectRef.current();
+        return;
+      }
+
+      const resolvedCandidate =
+        resolveDisconnectCandidateRef.current(canvasPosition) ??
+        resolveDisconnectFallback(canvasPosition, disconnectState.fixedPort);
+      if (resolvedCandidate) {
+        completeDisconnectDragRef.current(resolvedCandidate);
+      }
+      endConnectionDisconnectRef.current();
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
@@ -149,5 +309,5 @@ export const useNodeLayerConnections = () => {
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
     };
-  }, [interactionState.connectionDisconnectState, utils.screenToCanvas]);
+  }, [isDisconnecting, handleDisconnectUp]);
 };

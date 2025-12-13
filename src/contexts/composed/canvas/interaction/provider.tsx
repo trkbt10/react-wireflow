@@ -10,6 +10,10 @@ import {
   type CanvasInteractionContextValue,
   canvasInteractionActions,
   CanvasInteractionStateContext,
+  CanvasInteractionDragStateContext,
+  CanvasInteractionConnectionDragMetaContext,
+  CanvasInteractionResizeStateContext,
+  CanvasInteractionConnectionDisconnectActiveContext,
   CanvasInteractionActionsContext,
   CanvasInteractionContext,
 } from "./context";
@@ -172,7 +176,27 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
     ...defaultCanvasInteractionState,
     ...initialState,
   });
+  const stateRef = React.useRef(state);
+  stateRef.current = state;
   const boundActions = React.useMemo(() => bindActionCreators(canvasInteractionActions, dispatch), [dispatch]);
+
+  const connectionDragMeta = React.useMemo(() => {
+    if (!state.connectionDragState) {
+      return null;
+    }
+    return {
+      fromPort: state.connectionDragState.fromPort,
+      candidatePortId: state.connectionDragState.candidatePort?.id ?? null,
+      candidatePortNodeId: state.connectionDragState.candidatePort?.nodeId ?? null,
+    };
+  }, [
+    state.connectionDragState?.fromPort.nodeId,
+    state.connectionDragState?.fromPort.id,
+    state.connectionDragState?.candidatePort?.nodeId,
+    state.connectionDragState?.candidatePort?.id,
+  ]);
+
+  const getState = React.useCallback(() => stateRef.current, []);
 
   // Stable actions value - only depends on dispatch which is stable
   const actionsValue = React.useMemo<CanvasInteractionActionsValue>(
@@ -180,8 +204,9 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
       dispatch,
       actions: boundActions,
       actionCreators: canvasInteractionActions,
+      getState,
     }),
-    [dispatch, boundActions],
+    [dispatch, boundActions, getState],
   );
 
   // Combined context value
@@ -195,9 +220,17 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
 
   return (
     <CanvasInteractionStateContext.Provider value={state}>
-      <CanvasInteractionActionsContext.Provider value={actionsValue}>
-        <CanvasInteractionContext.Provider value={contextValue}>{children}</CanvasInteractionContext.Provider>
-      </CanvasInteractionActionsContext.Provider>
+      <CanvasInteractionDragStateContext.Provider value={state.dragState}>
+        <CanvasInteractionConnectionDragMetaContext.Provider value={connectionDragMeta}>
+          <CanvasInteractionResizeStateContext.Provider value={state.resizeState}>
+            <CanvasInteractionConnectionDisconnectActiveContext.Provider value={Boolean(state.connectionDisconnectState)}>
+              <CanvasInteractionActionsContext.Provider value={actionsValue}>
+                <CanvasInteractionContext.Provider value={contextValue}>{children}</CanvasInteractionContext.Provider>
+              </CanvasInteractionActionsContext.Provider>
+            </CanvasInteractionConnectionDisconnectActiveContext.Provider>
+          </CanvasInteractionResizeStateContext.Provider>
+        </CanvasInteractionConnectionDragMetaContext.Provider>
+      </CanvasInteractionDragStateContext.Provider>
     </CanvasInteractionStateContext.Provider>
   );
 };

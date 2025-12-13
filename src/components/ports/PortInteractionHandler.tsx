@@ -10,6 +10,7 @@ import { useNodeCanvasUtils } from "../../contexts/composed/canvas/viewport/cont
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import { usePointerDrag } from "../../hooks/usePointerDrag";
 import { createActionPort } from "../../core/port/identity/variant";
+import { createPortKey } from "../../core/port/identity/key";
 import { isPortConnectable } from "../../core/port/connectivity/connectableTypes";
 import { computeConnectablePortIds } from "../../core/port/connectivity/planner";
 import { useConnectionOperations } from "../../contexts/node-ports/hooks/useConnectionOperations";
@@ -48,7 +49,7 @@ export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ 
   const isConnecting = interactionState.connectionDragState?.fromPort.id === port.id;
   const isConnectable = isPortConnectable(port, actionState.connectablePorts);
   const isCandidate = interactionState.connectionDragState?.candidatePort?.id === port.id;
-  const isConnected = actionState.connectedPorts.has(port.id);
+  const isConnected = actionState.connectedPorts.has(createPortKey(port.nodeId, port.id));
 
   // Convert to Port for actions using factory to ensure all properties are copied
   const actionPort = React.useMemo<Port>(() => createActionPort(port), [port]);

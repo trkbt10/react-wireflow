@@ -16,7 +16,7 @@ export type ConnectionLayerProps = {
  * ConnectionLayer - Renders all connections and the drag connection preview.
  * Each ConnectionRenderer derives its own interaction state from context.
  */
-export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({ className }) => {
+const ConnectionLayerComponent: React.FC<ConnectionLayerProps> = ({ className }) => {
   const { state: nodeEditorState } = useNodeEditor();
 
   return (
@@ -28,5 +28,7 @@ export const ConnectionLayer: React.FC<ConnectionLayerProps> = ({ className }) =
     </svg>
   );
 };
+
+export const ConnectionLayer = React.memo(ConnectionLayerComponent);
 
 ConnectionLayer.displayName = "ConnectionLayer";

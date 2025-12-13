@@ -26,15 +26,18 @@ type DragVariant = "connecting" | "disconnecting";
  */
 type DragConnectionParams = {
   variant: DragVariant;
-  /** Connection endpoints (output → input) */
+  /**
+   * Connection endpoints used for drawing.
+   * For previews, this represents the dragged port → pointer/candidate direction.
+   */
   endpoints: ConnectionEndpoints;
-  /** Output port (where data flows from) */
+  /** Drag source port */
   outputPort: CorePort | undefined;
-  /** Input port (where data flows to) */
+  /** Drag target port (undefined while hovering empty space) */
   inputPort: CorePort | undefined;
-  /** Node containing the output port */
+  /** Node containing the drag source port */
   outputNode: EditorNode | undefined;
-  /** Node containing the input port */
+  /** Node containing the drag target port */
   inputNode: EditorNode | undefined;
   connection: Connection | null;
 };
@@ -111,23 +114,16 @@ const useConnectingParams = (): DragConnectionParams | null => {
   const candidateNode = candidatePort ? nodeEditorState.nodes[candidatePort.nodeId] : undefined;
   const candidatePosition = candidatePort && candidatePos ? candidatePos : dragState.toPosition;
 
-  // Normalize: output port is always "from", input port is always "to"
-  const isDraggingFromOutput = dragStartPort.type === "output";
-
-  const outputPosition = isDraggingFromOutput
-    ? { x: dragStartPos.x, y: dragStartPos.y }
-    : { x: candidatePosition.x, y: candidatePosition.y };
-  const inputPosition = isDraggingFromOutput
-    ? { x: candidatePosition.x, y: candidatePosition.y }
-    : { x: dragStartPos.x, y: dragStartPos.y };
-
   return {
     variant: "connecting",
-    endpoints: { outputPosition, inputPosition },
-    outputPort: isDraggingFromOutput ? dragStartPort : candidatePort,
-    inputPort: isDraggingFromOutput ? candidatePort : dragStartPort,
-    outputNode: isDraggingFromOutput ? dragStartNode : candidateNode,
-    inputNode: isDraggingFromOutput ? candidateNode : dragStartNode,
+    endpoints: {
+      outputPosition: { x: dragStartPos.x, y: dragStartPos.y },
+      inputPosition: { x: candidatePosition.x, y: candidatePosition.y },
+    },
+    outputPort: dragStartPort,
+    inputPort: candidatePort,
+    outputNode: dragStartNode,
+    inputNode: candidateNode,
     connection: null,
   };
 };

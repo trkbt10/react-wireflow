@@ -3,7 +3,7 @@
  */
 import * as React from "react";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
-import { useCanvasInteraction } from "../../../contexts/composed/canvas/interaction/context";
+import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
 import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useInteractionSettings } from "../../../contexts/interaction-settings/context";
@@ -30,7 +30,7 @@ export const useNodeSelectionInteractions = (
   options: UseNodeSelectionInteractionsOptions = {},
 ): NodeSelectionHandlers => {
   const { state: actionState, actions: actionActions } = useEditorActionState();
-  const { state: _interactionState, actions: interactionActions } = useCanvasInteraction();
+  const { actions: interactionActions } = useCanvasInteractionActions();
   const { state: nodeEditorState } = useNodeEditor();
   const utils = useNodeCanvasUtils();
   const interactionSettings = useInteractionSettings();
