@@ -178,6 +178,13 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
   });
   const stateRef = React.useRef(state);
   stateRef.current = state;
+  const subscribersRef = React.useRef(new Set<() => void>());
+  const subscribe = React.useCallback((listener: () => void) => {
+    subscribersRef.current.add(listener);
+    return () => {
+      subscribersRef.current.delete(listener);
+    };
+  }, []);
   const boundActions = React.useMemo(() => bindActionCreators(canvasInteractionActions, dispatch), [dispatch]);
 
   const connectionDragMeta = React.useMemo(() => {
@@ -198,6 +205,10 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
 
   const getState = React.useCallback(() => stateRef.current, []);
 
+  React.useEffect(() => {
+    subscribersRef.current.forEach((listener) => listener());
+  }, [state]);
+
   // Stable actions value - only depends on dispatch which is stable
   const actionsValue = React.useMemo<CanvasInteractionActionsValue>(
     () => ({
@@ -205,8 +216,9 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
       actions: boundActions,
       actionCreators: canvasInteractionActions,
       getState,
+      subscribe,
     }),
-    [dispatch, boundActions, getState],
+    [dispatch, boundActions, getState, subscribe],
   );
 
   // Combined context value

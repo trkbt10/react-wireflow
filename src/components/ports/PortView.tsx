@@ -4,7 +4,7 @@
 import * as React from "react";
 import type { Port } from "../../types/core";
 import { useDynamicPortPosition } from "../../contexts/node-ports/hooks/usePortPosition";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorApi } from "../../contexts/composed/node-editor/context";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import type { PortRenderContext } from "../../types/NodeDefinition";
 import styles from "./PortView.module.css";
@@ -110,8 +110,8 @@ export const PortView: React.FC<PortViewProps> = ({
   });
 
   // Get node editor state for custom renderer context
-  const { state } = useNodeEditor();
-  const node = state.nodes[port.nodeId];
+  const { getNodeById, getState } = useNodeEditorApi();
+  const node = getNodeById(port.nodeId);
 
   // Get port definition to check for custom port renderer
   const { getPortDefinition } = useNodeDefinitions();
@@ -153,6 +153,7 @@ export const PortView: React.FC<PortViewProps> = ({
 
   // Check if there's a custom renderer
   if (portDefinition?.renderPort && node) {
+    const state = getState();
     // Build context for custom renderer
     const context: PortRenderContext = {
       port,

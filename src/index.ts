@@ -9,6 +9,10 @@ export type { NodeEditorProps } from "./NodeEditor";
 export type { NodeEditorData } from "./types/core";
 export type { NodeEditorRenderers, NodeEditorRendererOverrides } from "./types/renderers";
 
+// Debug utilities (opt-in)
+export { RenderLoopDetector } from "./components/debug/RenderLoopDetector";
+export type { RenderLoopDetectorProps } from "./components/debug/RenderLoopDetector";
+
 // Helper components for custom node implementations
 export { NodeResizer, normalizeNodeSize, useNodeResizerContext } from "./components/node/resize/NodeResizer";
 export type { NodeResizerProps } from "./components/node/resize/NodeResizer";

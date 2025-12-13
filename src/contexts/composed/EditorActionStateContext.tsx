@@ -559,6 +559,30 @@ export const useEditorActionState = (): EditorActionStateContextValue => {
   return context;
 };
 
+/**
+ * Hook to access only the editor action state.
+ * Prefer this in performance-sensitive render paths to avoid re-renders when only actions change.
+ */
+export const useEditorActionStateState = (): EditorActionState => {
+  const state = React.useContext(EditorActionStateStateContext);
+  if (!state) {
+    throw new Error("useEditorActionStateState must be used within an EditorActionStateProvider");
+  }
+  return state;
+};
+
+/**
+ * Hook to access only the editor action actions.
+ * Prefer this when you only need to dispatch and don't want to re-render on state changes.
+ */
+export const useEditorActionStateActions = (): EditorActionStateActionsValue => {
+  const actions = React.useContext(EditorActionStateActionsContext);
+  if (!actions) {
+    throw new Error("useEditorActionStateActions must be used within an EditorActionStateProvider");
+  }
+  return actions;
+};
+
 // ============================================================================
 // Selection Set Hooks (O(1) lookup)
 // ============================================================================
@@ -567,11 +591,8 @@ export const useEditorActionState = (): EditorActionStateContextValue => {
  * Returns a memoized Set of selected node IDs for O(1) lookup.
  */
 export const useSelectedNodeIdsSet = (): ReadonlySet<NodeId> => {
-  const context = React.useContext(EditorActionStateContext);
-  if (!context) {
-    throw new Error("useSelectedNodeIdsSet must be used within an EditorActionStateProvider");
-  }
-  const { selectedNodeIds } = context.state;
+  const state = useEditorActionStateState();
+  const { selectedNodeIds } = state;
   return React.useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
 };
 
@@ -579,10 +600,7 @@ export const useSelectedNodeIdsSet = (): ReadonlySet<NodeId> => {
  * Returns a memoized Set of selected connection IDs for O(1) lookup.
  */
 export const useSelectedConnectionIdsSet = (): ReadonlySet<ConnectionId> => {
-  const context = React.useContext(EditorActionStateContext);
-  if (!context) {
-    throw new Error("useSelectedConnectionIdsSet must be used within an EditorActionStateProvider");
-  }
-  const { selectedConnectionIds } = context.state;
+  const state = useEditorActionStateState();
+  const { selectedConnectionIds } = state;
   return React.useMemo(() => new Set(selectedConnectionIds), [selectedConnectionIds]);
 };

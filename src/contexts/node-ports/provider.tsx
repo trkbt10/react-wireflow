@@ -18,6 +18,7 @@ import type {
 import { computeAllPortPositions, computeNodePortPositions } from "../../core/port/spatiality/computePositions";
 import { PortPositionContext } from "./context";
 import type { PortPositionContextValue } from "./context";
+import { PortPositionSettingsContext, type PortPositionSettingsValue } from "./context";
 import { useNodeEditor } from "../composed/node-editor/context";
 import { useNodeDefinitions } from "../node-definitions/context";
 import { hasNodeGeometryChanged } from "../../core/node/comparators";
@@ -95,7 +96,13 @@ const StatelessPortPositionProvider: React.FC<{
     };
   }, [calculateNodePortPositions, portPositions, behavior, config]);
 
-  return <PortPositionContext.Provider value={value}>{children}</PortPositionContext.Provider>;
+  const settingsValue = React.useMemo<PortPositionSettingsValue>(() => ({ config, behavior }), [config, behavior]);
+
+  return (
+    <PortPositionSettingsContext.Provider value={settingsValue}>
+      <PortPositionContext.Provider value={value}>{children}</PortPositionContext.Provider>
+    </PortPositionSettingsContext.Provider>
+  );
 };
 
 /**

@@ -1,5 +1,5 @@
 /**
- * @file Render-regression test ensuring node drag does not cascade commits into all nodes.
+ * @file Regression test ensuring node move commit does not re-render unrelated nodes.
  */
 import * as React from "react";
 import { act, fireEvent, render } from "@testing-library/react";
@@ -42,7 +42,6 @@ type NodeCommitCounts = Record<string, number>;
 const createCommitCounter = () => {
   const counts: NodeCommitCounts = {};
   return {
-    counts,
     inc: (nodeId: string) => {
       counts[nodeId] = (counts[nodeId] ?? 0) + 1;
     },
@@ -65,14 +64,14 @@ const createInitialData = (nodeCount: number): Partial<NodeEditorData> => {
   return { nodes, connections: {} };
 };
 
-describe("node drag render regression", () => {
+describe("node move commit render regression", () => {
   beforeAll(() => {
     ensurePointerCaptureApis();
   });
 
-  it("does not commit non-dragged nodes during pointer move", async () => {
+  it("does not commit non-moved nodes on pointer up (moveNodes commit)", async () => {
     const counter = createCommitCounter();
-    const CountingNodeComponent: React.FC<NodeViewProps> = (props) => {
+    const CountingNodeInner: React.FC<NodeViewProps> = (props) => {
       return (
         <React.Profiler
           id={`node-${props.node.id}`}
@@ -84,9 +83,9 @@ describe("node drag render regression", () => {
         </React.Profiler>
       );
     };
-    const CountingNode = React.memo(CountingNodeComponent);
+    const CountingNode = React.memo(CountingNodeInner);
 
-    const initialData = createInitialData(30);
+    const initialData = createInitialData(40);
     const { container } = render(
       <NodeEditorCore initialData={initialData} renderers={{ node: CountingNode }}>
         <NodeCanvas />
@@ -95,14 +94,12 @@ describe("node drag render regression", () => {
 
     await nextFrame();
 
-    const nodeId = "n0";
-    const nodeEl = container.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement | null;
-    expect(nodeEl).not.toBeNull();
-
-    const baseline = counter.snapshot();
+    const movedNodeId = "n0";
+    const movedNodeEl = container.querySelector(`[data-node-id="${movedNodeId}"]`) as HTMLElement | null;
+    expect(movedNodeEl).not.toBeNull();
 
     await act(async () => {
-      fireEvent.pointerDown(nodeEl!, {
+      fireEvent.pointerDown(movedNodeEl!, {
         pointerId: 1,
         pointerType: "mouse",
         button: 0,
@@ -112,8 +109,6 @@ describe("node drag render regression", () => {
       });
     });
     await nextFrame();
-
-    const afterDown = counter.snapshot();
 
     await act(async () => {
       for (const step of [1, 2, 3, 4, 5]) {
@@ -128,18 +123,7 @@ describe("node drag render regression", () => {
       }
     });
 
-    const afterMoves = counter.snapshot();
-
-    expect(afterMoves[nodeId]).toBeGreaterThan(afterDown[nodeId] ?? baseline[nodeId] ?? 0);
-
-    const nonDraggedDeltas = Object.entries(afterDown)
-      .filter(([id]) => id !== nodeId)
-      .map(([id, countAfterDown]) => (afterMoves[id] ?? 0) - countAfterDown);
-
-    const maxNonDraggedDelta = Math.max(...nonDraggedDeltas);
-    // Allow a small amount of incidental commits (e.g., a one-time layout/viewbox effect),
-    // but prevent per-pointermove cascades across many nodes.
-    expect(maxNonDraggedDelta).toBeLessThanOrEqual(2);
+    const beforeUp = counter.snapshot();
 
     await act(async () => {
       fireEvent.pointerUp(window, {
@@ -147,9 +131,28 @@ describe("node drag render regression", () => {
         pointerType: "mouse",
         button: 0,
         buttons: 0,
-        clientX: 60,
+        clientX: 70,
         clientY: 10,
       });
     });
+    await nextFrame();
+
+    const afterUp = counter.snapshot();
+
+    const nonMovedDeltas = Object.entries(beforeUp)
+      .filter(([id]) => id !== movedNodeId)
+      .map(([id, before]) => (afterUp[id] ?? 0) - before);
+
+    const maxNonMovedDelta = Math.max(...nonMovedDeltas);
+    if (maxNonMovedDelta > 0) {
+      const offenders = Object.entries(beforeUp)
+        .filter(([id]) => id !== movedNodeId)
+        .map(([id, before]) => ({ id, delta: (afterUp[id] ?? 0) - before }))
+        .filter((entry) => entry.delta > 0)
+        .sort((a, b) => b.delta - a.delta)
+        .slice(0, 6);
+      throw new Error(`non-moved node commits detected: ${JSON.stringify(offenders)}`);
+    }
+    expect(maxNonMovedDelta).toBeLessThanOrEqual(0);
   });
 });

@@ -63,7 +63,7 @@ export type NodeViewPresenterProps = {
   onPortPointerCancel?: (e: React.PointerEvent, port: Port) => void;
   connectingPort?: Port;
   hoveredPort?: Port;
-  connectedPorts?: Set<string>;
+  connectedPortIds?: ReadonlySet<string>;
   connectablePorts?: ConnectablePortsResult;
   candidatePortId?: string;
 };
@@ -106,7 +106,7 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
   onPortPointerCancel,
   connectingPort,
   hoveredPort,
-  connectedPorts,
+  connectedPortIds,
   connectablePorts,
   candidatePortId,
 }) => {
@@ -242,7 +242,7 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
         onPortPointerLeave={onPortPointerLeave}
         onPortPointerCancel={onPortPointerCancel}
         hoveredPort={hoveredPort}
-        connectedPorts={connectedPorts}
+        connectedPortIds={connectedPortIds}
         connectablePorts={connectablePorts}
         connectingPortId={connectingPortId}
         candidatePortId={candidatePortId}

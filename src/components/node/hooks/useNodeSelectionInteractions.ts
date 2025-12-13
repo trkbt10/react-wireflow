@@ -2,7 +2,7 @@
  * @file Selection + context-menu interactions sourced from editor contexts.
  */
 import * as React from "react";
-import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
+import { useEditorActionStateActions, useEditorActionStateState } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
 import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
@@ -29,7 +29,8 @@ const noopGetGroupChildren: UseGroupManagementResult["getGroupChildren"] = () =>
 export const useNodeSelectionInteractions = (
   options: UseNodeSelectionInteractionsOptions = {},
 ): NodeSelectionHandlers => {
-  const { state: actionState, actions: actionActions } = useEditorActionState();
+  const actionState = useEditorActionStateState();
+  const { actions: actionActions } = useEditorActionStateActions();
   const { actions: interactionActions } = useCanvasInteractionActions();
   const { state: nodeEditorState } = useNodeEditor();
   const utils = useNodeCanvasUtils();
@@ -39,49 +40,67 @@ export const useNodeSelectionInteractions = (
   const nodeDefinitionList = useNodeDefinitionList();
   const getGroupChildren = options.getGroupChildren ?? noopGetGroupChildren;
 
-  const handleNodeContextMenu = React.useCallback(
-    (event: React.MouseEvent, nodeId: string) => {
-      const nativeEvent = event.nativeEvent as MouseEvent & { pointerType?: string };
-      if (!matchesPointerAction("node-open-context-menu", nativeEvent)) {
-        return;
-      }
+  const actionStateRef = React.useRef(actionState);
+  actionStateRef.current = actionState;
+  const nodeEditorNodesRef = React.useRef(nodeEditorState.nodes);
+  nodeEditorNodesRef.current = nodeEditorState.nodes;
+  const nodeDefinitionRegistryRef = React.useRef(nodeDefinitionRegistry);
+  nodeDefinitionRegistryRef.current = nodeDefinitionRegistry;
+  const nodeDefinitionListRef = React.useRef(nodeDefinitionList);
+  nodeDefinitionListRef.current = nodeDefinitionList;
+  const getGroupChildrenRef = React.useRef(getGroupChildren);
+  getGroupChildrenRef.current = getGroupChildren;
+  const actionActionsRef = React.useRef(actionActions);
+  actionActionsRef.current = actionActions;
+  const interactionActionsRef = React.useRef(interactionActions);
+  interactionActionsRef.current = interactionActions;
+  const utilsRef = React.useRef(utils);
+  utilsRef.current = utils;
+  const matchesPointerActionRef = React.useRef(matchesPointerAction);
+  matchesPointerActionRef.current = matchesPointerAction;
+  const contextMenuHandlerRef = React.useRef(interactionSettings.contextMenu.handleRequest);
+  contextMenuHandlerRef.current = interactionSettings.contextMenu.handleRequest;
 
-      event.preventDefault();
-      event.stopPropagation();
+  const handleNodeContextMenu = React.useEffectEvent((event: React.MouseEvent, nodeId: string) => {
+    const nativeEvent = event.nativeEvent as MouseEvent & { pointerType?: string };
+    if (!matchesPointerActionRef.current("node-open-context-menu", nativeEvent)) {
+      return;
+    }
 
-      const pointerType: PointerType | "unknown" =
-        nativeEvent.pointerType === "mouse" || nativeEvent.pointerType === "touch" || nativeEvent.pointerType === "pen"
-          ? (nativeEvent.pointerType as PointerType)
-          : "unknown";
+    event.preventDefault();
+    event.stopPropagation();
 
-      const screenPosition = { x: event.clientX, y: event.clientY };
-      const canvasPosition = utils.screenToCanvas(event.clientX, event.clientY);
+    const pointerType: PointerType | "unknown" =
+      nativeEvent.pointerType === "mouse" || nativeEvent.pointerType === "touch" || nativeEvent.pointerType === "pen"
+        ? (nativeEvent.pointerType as PointerType)
+        : "unknown";
 
-      const defaultShow = () => actionActions.showContextMenu({ position: screenPosition, nodeId, canvasPosition });
+    const screenPosition = { x: event.clientX, y: event.clientY };
+    const canvasPosition = utilsRef.current.screenToCanvas(event.clientX, event.clientY);
 
-      const handler = interactionSettings.contextMenu.handleRequest;
-      if (handler) {
-        handler({
-          target: { kind: "node", nodeId },
-          screenPosition,
-          canvasPosition,
-          pointerType,
-          event: nativeEvent,
-          defaultShow,
-        });
-        return;
-      }
+    const defaultShow = () => actionActionsRef.current.showContextMenu({ position: screenPosition, nodeId, canvasPosition });
 
-      defaultShow();
-    },
-    [matchesPointerAction, utils, actionActions, interactionSettings.contextMenu.handleRequest],
-  );
+    const handler = contextMenuHandlerRef.current;
+    if (handler) {
+      handler({
+        target: { kind: "node", nodeId },
+        screenPosition,
+        canvasPosition,
+        pointerType,
+        event: nativeEvent,
+        defaultShow,
+      });
+      return;
+    }
 
-  const handleNodePointerDown = React.useCallback(
+    defaultShow();
+  });
+
+  const handleNodePointerDown = React.useEffectEvent(
     (event: React.PointerEvent, targetNodeId: string, isDragAllowed: boolean = true) => {
       const nativeEvent = event.nativeEvent;
-      const matchesMultiSelect = matchesPointerAction("node-add-to-selection", nativeEvent);
-      const matchesSelect = matchesPointerAction("node-select", nativeEvent) || matchesMultiSelect;
+      const matchesMultiSelect = matchesPointerActionRef.current("node-add-to-selection", nativeEvent);
+      const matchesSelect = matchesPointerActionRef.current("node-select", nativeEvent) || matchesMultiSelect;
 
       if (!matchesSelect && !matchesMultiSelect) {
         return;
@@ -94,26 +113,28 @@ export const useNodeSelectionInteractions = (
         return;
       }
 
-      const clickedNode = nodeEditorState.nodes[targetNodeId];
-      const wasSelected = actionState.selectedNodeIds.includes(targetNodeId);
-      const hadMultipleSelection = actionState.selectedNodeIds.length > 1;
+      const nodes = nodeEditorNodesRef.current;
+      const clickedNode = nodes[targetNodeId];
+      const selectedNodeIds = actionStateRef.current.selectedNodeIds;
+      const wasSelected = selectedNodeIds.includes(targetNodeId);
+      const hadMultipleSelection = selectedNodeIds.length > 1;
 
       if (matchesMultiSelect) {
-        actionActions.selectEditingNode(targetNodeId, true);
-        actionActions.selectInteractionNode(targetNodeId, true);
+        actionActionsRef.current.selectEditingNode(targetNodeId, true);
+        actionActionsRef.current.selectInteractionNode(targetNodeId, true);
         if (wasSelected) {
           return;
         }
       } else if (!wasSelected || !hadMultipleSelection) {
-        actionActions.selectEditingNode(targetNodeId, false);
-        actionActions.selectInteractionNode(targetNodeId, false);
+        actionActionsRef.current.selectEditingNode(targetNodeId, false);
+        actionActionsRef.current.selectInteractionNode(targetNodeId, false);
       }
 
       if (clickedNode?.locked) {
         return;
       }
 
-      const nodeDefinition = clickedNode ? nodeDefinitionRegistry.get(clickedNode.type) : undefined;
+      const nodeDefinition = clickedNode ? nodeDefinitionRegistryRef.current.get(clickedNode.type) : undefined;
       const isInteractive = nodeDefinition?.interactive || false;
 
       if (isInteractive && !isDragAllowed && !wasSelected) {
@@ -121,16 +142,16 @@ export const useNodeSelectionInteractions = (
       }
 
       const effectiveSelection = matchesMultiSelect
-        ? addUniqueIds(actionState.selectedNodeIds, [targetNodeId])
+        ? addUniqueIds(selectedNodeIds, [targetNodeId])
         : wasSelected && hadMultipleSelection
-          ? actionState.selectedNodeIds
+          ? selectedNodeIds
           : [targetNodeId];
 
       const nodesToDrag = getNodesToDrag(
         targetNodeId,
         matchesMultiSelect,
         effectiveSelection,
-        nodeEditorState.nodes,
+        nodes,
         isInteractive,
         isDragAllowed,
       );
@@ -142,22 +163,13 @@ export const useNodeSelectionInteractions = (
       const startPosition = { x: event.clientX, y: event.clientY };
       const { initialPositions, affectedChildNodes } = collectInitialPositions(
         nodesToDrag,
-        nodeEditorState.nodes,
-        getGroupChildren,
-        nodeDefinitionList,
+        nodes,
+        getGroupChildrenRef.current,
+        nodeDefinitionListRef.current,
       );
 
-      interactionActions.startNodeDrag(nodesToDrag, startPosition, initialPositions, affectedChildNodes);
+      interactionActionsRef.current.startNodeDrag(nodesToDrag, startPosition, initialPositions, affectedChildNodes);
     },
-    [
-      matchesPointerAction,
-      nodeEditorState.nodes,
-      actionState.selectedNodeIds,
-      nodeDefinitionRegistry,
-      nodeDefinitionList,
-      getGroupChildren,
-      actionActions,
-    ],
   );
 
   return {

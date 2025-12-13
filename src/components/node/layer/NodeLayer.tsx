@@ -3,7 +3,8 @@
  */
 import * as React from "react";
 import {
-  useEditorActionState,
+  useEditorActionStateActions,
+  useEditorActionStateState,
   useSelectedNodeIdsSet,
 } from "../../../contexts/composed/EditorActionStateContext";
 import {
@@ -32,8 +33,9 @@ export type NodeLayerProps = {
  */
 const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
   void doubleClickToEdit;
-  const { sortedNodes, connectedPorts } = useNodeEditor();
-  const { state: actionState, actions: actionActions } = useEditorActionState();
+  const { sortedNodes, connectedPorts, connectedPortIdsByNode } = useNodeEditor();
+  const actionState = useEditorActionStateState();
+  const { actions: actionActions } = useEditorActionStateActions();
   const dragState = useCanvasInteractionDragState();
   const connectionDragMeta = useCanvasInteractionConnectionDragMeta();
   const gridSettings = useNodeCanvasGridSettings();
@@ -64,6 +66,18 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
     getGroupChildren: groupManager.getGroupChildren,
   });
 
+  const handleNodePointerDownRef = React.useRef(handleNodePointerDown);
+  handleNodePointerDownRef.current = handleNodePointerDown;
+  const onNodePointerDown = React.useCallback((...args: Parameters<typeof handleNodePointerDown>) => {
+    return handleNodePointerDownRef.current(...args);
+  }, []);
+
+  const handleNodeContextMenuRef = React.useRef(handleNodeContextMenu);
+  handleNodeContextMenuRef.current = handleNodeContextMenu;
+  const onNodeContextMenu = React.useCallback((...args: Parameters<typeof handleNodeContextMenu>) => {
+    return handleNodeContextMenuRef.current(...args);
+  }, []);
+
   // Port event handlers
   const {
     handlePortPointerDown,
@@ -73,6 +87,42 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
     handlePortPointerLeave,
     handlePortPointerCancel,
   } = useNodeLayerPorts();
+
+  const handlePortPointerDownRef = React.useRef(handlePortPointerDown);
+  handlePortPointerDownRef.current = handlePortPointerDown;
+  const onPortPointerDown = React.useCallback((...args: Parameters<typeof handlePortPointerDown>) => {
+    return handlePortPointerDownRef.current(...args);
+  }, []);
+
+  const handlePortPointerUpRef = React.useRef(handlePortPointerUp);
+  handlePortPointerUpRef.current = handlePortPointerUp;
+  const onPortPointerUp = React.useCallback((...args: Parameters<typeof handlePortPointerUp>) => {
+    return handlePortPointerUpRef.current(...args);
+  }, []);
+
+  const handlePortPointerEnterRef = React.useRef(handlePortPointerEnter);
+  handlePortPointerEnterRef.current = handlePortPointerEnter;
+  const onPortPointerEnter = React.useCallback((...args: Parameters<typeof handlePortPointerEnter>) => {
+    return handlePortPointerEnterRef.current(...args);
+  }, []);
+
+  const handlePortPointerMoveRef = React.useRef(handlePortPointerMove);
+  handlePortPointerMoveRef.current = handlePortPointerMove;
+  const onPortPointerMove = React.useCallback((...args: Parameters<typeof handlePortPointerMove>) => {
+    return handlePortPointerMoveRef.current(...args);
+  }, []);
+
+  const handlePortPointerLeaveRef = React.useRef(handlePortPointerLeave);
+  handlePortPointerLeaveRef.current = handlePortPointerLeave;
+  const onPortPointerLeave = React.useCallback((...args: Parameters<typeof handlePortPointerLeave>) => {
+    return handlePortPointerLeaveRef.current(...args);
+  }, []);
+
+  const handlePortPointerCancelRef = React.useRef(handlePortPointerCancel);
+  handlePortPointerCancelRef.current = handlePortPointerCancel;
+  const onPortPointerCancel = React.useCallback((...args: Parameters<typeof handlePortPointerCancel>) => {
+    return handlePortPointerCancelRef.current(...args);
+  }, []);
 
   useNodeLayerDrag(groupManager.moveGroupWithChildren);
 
@@ -107,18 +157,18 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
             isSelected={selectedNodeIdsSet.has(node.id)}
             isDragging={isDirectlyDragging}
             dragOffset={dragOffset}
-            onPointerDown={handleNodePointerDown}
-            onContextMenu={handleNodeContextMenu}
-            onPortPointerDown={handlePortPointerDown}
-            onPortPointerUp={handlePortPointerUp}
-            onPortPointerEnter={handlePortPointerEnter}
-            onPortPointerMove={handlePortPointerMove}
-            onPortPointerLeave={handlePortPointerLeave}
-            onPortPointerCancel={handlePortPointerCancel}
+            onPointerDown={onNodePointerDown}
+            onContextMenu={onNodeContextMenu}
+            onPortPointerDown={onPortPointerDown}
+            onPortPointerUp={onPortPointerUp}
+            onPortPointerEnter={onPortPointerEnter}
+            onPortPointerMove={onPortPointerMove}
+            onPortPointerLeave={onPortPointerLeave}
+            onPortPointerCancel={onPortPointerCancel}
             connectablePorts={connectablePorts}
             connectingPort={connectingPortForNode}
             hoveredPort={hoveredPortForNode}
-            connectedPorts={connectedPorts}
+            connectedPortIds={connectedPortIdsByNode.get(node.id)}
             candidatePortId={candidatePortIdForNode}
           />
         );

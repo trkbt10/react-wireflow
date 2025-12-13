@@ -2,7 +2,7 @@
  * @file Hook for handling port interactions (click, drag, hover).
  */
 import * as React from "react";
-import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
+import { useEditorActionStateActions } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasActions, useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
@@ -20,7 +20,7 @@ import { useConnectionOperations } from "../../../contexts/node-ports/hooks/useC
 import { createEmptyConnectablePorts } from "../../../core/port/connectivity/connectableTypes";
 
 export const useNodeLayerPorts = () => {
-  const { state: _actionState, actions: actionActions } = useEditorActionState();
+  const { actions: actionActions } = useEditorActionStateActions();
   const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
   const { getState: getNodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
   const { containerRef } = useNodeCanvasActions();
@@ -198,6 +198,10 @@ export const useNodeLayerPorts = () => {
   });
 
   const updatePortHoverState = React.useEffectEvent((clientX: number, clientY: number, fallbackPort: Port) => {
+    const interactionState = getInteractionStateRef.current();
+    if (interactionState.dragState) {
+      return;
+    }
     const canvasPosition = utils.screenToCanvas(clientX, clientY);
     const candidate =
       resolveCandidatePort(canvasPosition) || resolveDisconnectCandidate(canvasPosition) || fallbackPort;
@@ -211,11 +215,18 @@ export const useNodeLayerPorts = () => {
   });
 
   const handlePortPointerEnter = React.useEffectEvent((event: React.PointerEvent, port: Port) => {
+    const interactionState = getInteractionStateRef.current();
+    if (interactionState.dragState) {
+      return;
+    }
     updatePortHoverState(event.clientX, event.clientY, port);
   });
 
   const handlePortPointerMove = React.useEffectEvent((event: React.PointerEvent, port: Port) => {
     const interactionState = getInteractionStateRef.current();
+    if (interactionState.dragState) {
+      return;
+    }
     if (!interactionState.connectionDragState && !interactionState.connectionDisconnectState) {
       return;
     }
@@ -223,9 +234,12 @@ export const useNodeLayerPorts = () => {
   });
 
   const handlePortPointerLeave = React.useEffectEvent(() => {
+    const interactionState = getInteractionStateRef.current();
+    if (interactionState.dragState) {
+      return;
+    }
     actionActions.setHoveredPort(null);
     lastHoveredPortIdRef.current = null;
-    const interactionState = getInteractionStateRef.current();
     if (!interactionState.connectionDragState) {
       actionActions.updateConnectablePorts(createEmptyConnectablePorts());
     }

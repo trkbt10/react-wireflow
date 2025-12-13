@@ -3,7 +3,6 @@
  */
 import * as React from "react";
 import { bindActionCreators } from "../../../../utils/typedActions";
-import { useResizeObserver } from "../../../../hooks/useResizeObserver";
 import {
   type NodeCanvasState,
   type NodeCanvasActionsValue,
@@ -32,29 +31,57 @@ export const NodeCanvasProvider: React.FC<NodeCanvasProviderProps> = ({ children
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const dispatch = store.dispatch;
+  const resizeObserverCleanupRef = React.useRef<(() => void) | null>(null);
+
+  const dispatchViewBoxIfChanged = React.useCallback(
+    (next: { width: number; height: number }) => {
+      const current = store.getState().viewBox;
+      if (current.width === next.width && current.height === next.height) {
+        return;
+      }
+      store.dispatch(nodeCanvasActions.setViewBox(next));
+    },
+    [store],
+  );
 
   const setContainerElement = React.useCallback(
     (element: HTMLDivElement | null) => {
+      if (resizeObserverCleanupRef.current) {
+        resizeObserverCleanupRef.current();
+        resizeObserverCleanupRef.current = null;
+      }
       containerRef.current = element;
       if (!element) {
         return;
       }
       const rect = element.getBoundingClientRect();
-      store.dispatch(nodeCanvasActions.setViewBox({ width: rect.width, height: rect.height }));
+      dispatchViewBoxIfChanged({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+
+      if (typeof ResizeObserver === "undefined") {
+        return;
+      }
+
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) {
+          return;
+        }
+
+        // Use floor to avoid sub-pixel churn that can create render loops via repeated notifications.
+        const width = Math.floor(entry.contentRect.width);
+        const height = Math.floor(entry.contentRect.height);
+        dispatchViewBoxIfChanged({ width, height });
+      });
+
+      observer.observe(element, { box: "border-box" });
+      resizeObserverCleanupRef.current = () => {
+        observer.disconnect();
+      };
     },
-    [store],
+    [dispatchViewBoxIfChanged],
   );
 
   const boundActions = React.useMemo(() => bindActionCreators(nodeCanvasActions, dispatch), [dispatch]);
-
-  const { rect } = useResizeObserver(containerRef, { box: "border-box" });
-
-  React.useEffect(() => {
-    if (!rect) {
-      return;
-    }
-    store.dispatch(nodeCanvasActions.setViewBox({ width: rect.width, height: rect.height }));
-  }, [rect?.width, rect?.height, store]);
 
   // Stable actions value - refs and dispatch are stable
   const actionsValue = React.useMemo<NodeCanvasActionsValue>(
@@ -106,6 +133,15 @@ export const NodeCanvasProvider: React.FC<NodeCanvasProviderProps> = ({ children
     }),
     [actionsValue, store, utils],
   );
+
+  React.useEffect(() => {
+    return () => {
+      if (resizeObserverCleanupRef.current) {
+        resizeObserverCleanupRef.current();
+        resizeObserverCleanupRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <NodeCanvasContext.Provider value={contextValue}>{children}</NodeCanvasContext.Provider>

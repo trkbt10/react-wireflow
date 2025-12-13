@@ -193,9 +193,10 @@ export const updateGroupMembership = (
   for (const node of regularNodes) {
     const newParentId = findContainingGroup(node, allNodes, nodeDefinitions);
 
-    if (node.parentId !== newParentId) {
+    const currentParentId = node.parentId ?? null;
+    if (currentParentId !== newParentId) {
       updates[node.id] = {
-        parentId: newParentId || undefined,
+        parentId: newParentId ?? undefined,
       };
     }
   }

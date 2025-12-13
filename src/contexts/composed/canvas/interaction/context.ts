@@ -104,6 +104,7 @@ export type CanvasInteractionActionsValue = {
   actions: BoundActionCreators<typeof canvasInteractionActions>;
   actionCreators: typeof canvasInteractionActions;
   getState: () => CanvasInteractionState;
+  subscribe: (listener: () => void) => () => void;
 };
 
 export type CanvasInteractionContextValue = CanvasInteractionActionsValue & {
@@ -199,6 +200,31 @@ export const useCanvasInteractionActions = (): CanvasInteractionActionsValue => 
   }
   return actions;
 };
+
+/**
+ * Selects a derived value from the canvas interaction state without forcing consumers
+ * to re-render for unrelated state changes.
+ */
+export function useCanvasInteractionSelector<T>(
+  selector: (state: CanvasInteractionState) => T,
+  options?: { areEqual?: (a: T, b: T) => boolean },
+): T {
+  const { subscribe, getState } = useCanvasInteractionActions();
+  const previousRef = React.useRef<T | null>(null);
+
+  const getSnapshot = React.useCallback((): T => {
+    const next = selector(getState());
+    const previous = previousRef.current;
+    const areEqual = options?.areEqual;
+    if (previous !== null && areEqual && areEqual(previous, next)) {
+      return previous;
+    }
+    previousRef.current = next;
+    return next;
+  }, [getState, selector, options?.areEqual]);
+
+  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
 
 /**
  * Hook to access both state and actions

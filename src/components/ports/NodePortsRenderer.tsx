@@ -8,7 +8,6 @@ import { isPortConnectable } from "../../core/port/connectivity/connectableTypes
 import { PortView } from "./PortView";
 import { useOptionalRenderers } from "../../contexts/RendererContext";
 import { hasPortIdChanged } from "../../core/port/identity/comparators";
-import { createPortKey } from "../../core/port/identity/key";
 import styles from "./NodePortsRenderer.module.css";
 
 export type NodePortsRendererProps = {
@@ -20,7 +19,7 @@ export type NodePortsRendererProps = {
   onPortPointerLeave?: (e: React.PointerEvent, port: Port) => void;
   onPortPointerCancel?: (e: React.PointerEvent, port: Port) => void;
   hoveredPort?: Port;
-  connectedPorts?: Set<string>;
+  connectedPortIds?: ReadonlySet<string>;
   connectablePorts?: ConnectablePortsResult;
   connectingPortId?: string;
   candidatePortId?: string;
@@ -38,7 +37,7 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
   onPortPointerLeave,
   onPortPointerCancel,
   hoveredPort,
-  connectedPorts,
+  connectedPortIds,
   connectablePorts,
   connectingPortId,
   candidatePortId,
@@ -68,7 +67,7 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
             isConnectable={connectable}
             isCandidate={candidatePortId === port.id}
             isHovered={hoveredPort?.id === port.id}
-            isConnected={connectedPorts?.has(createPortKey(port.nodeId, port.id))}
+            isConnected={connectedPortIds?.has(port.id)}
           />
         );
       })}
@@ -115,10 +114,10 @@ export const NodePortsRenderer = React.memo(NodePortsRendererComponent, (prevPro
     debugLog("candidatePortId changed", { prev: prevProps.candidatePortId, next: nextProps.candidatePortId });
     return false;
   }
-  if (prevProps.connectedPorts !== nextProps.connectedPorts) {
-    debugLog("connectedPorts reference changed", {
-      prevSize: prevProps.connectedPorts?.size,
-      nextSize: nextProps.connectedPorts?.size,
+  if (prevProps.connectedPortIds !== nextProps.connectedPortIds) {
+    debugLog("connectedPortIds reference changed", {
+      prevSize: prevProps.connectedPortIds?.size,
+      nextSize: nextProps.connectedPortIds?.size,
     });
     return false;
   }

@@ -6,12 +6,11 @@ import * as React from "react";
 import type { Node, Position, Port, ResizeHandle as NodeResizeHandle } from "../../types/core";
 import type { ConnectablePortsResult } from "../../core/port/connectivity/connectableTypes";
 import { useInlineEditingActions, useInlineEditingState } from "../../contexts/InlineEditingContext";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
 import { useNodeDefinition } from "../../contexts/node-definitions/hooks/useNodeDefinition";
 import { useExternalDataRef } from "../../contexts/external-data/ExternalDataContext";
 import { useExternalData } from "../../contexts/external-data/useExternalData";
 import { useCanvasInteractionActions, useCanvasInteractionResizeState } from "../../contexts/composed/canvas/interaction/context";
-import { useGroupManagement } from "../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { computeNodeDerivedState } from "../../core/node/nodeState";
 import { hasGroupBehavior } from "../../types/behaviors";
 import { NodeViewPresenter } from "./NodeViewPresenter";
@@ -33,7 +32,7 @@ export type NodeViewContainerProps = {
   onPortPointerCancel?: (e: React.PointerEvent, port: Port) => void;
   connectingPort?: Port;
   hoveredPort?: Port;
-  connectedPorts?: Set<string>;
+  connectedPortIds?: ReadonlySet<string>;
   connectablePorts?: ConnectablePortsResult;
   candidatePortId?: string;
   nodeRenderer?: (props: NodeRendererProps) => React.ReactNode;
@@ -57,26 +56,32 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
   onPortPointerCancel,
   connectingPort,
   hoveredPort,
-  connectedPorts,
+  connectedPortIds,
   connectablePorts,
   candidatePortId,
 }) => {
-  const { actions: nodeEditorActions, getNodePorts, getNodeById } = useNodeEditor();
+  const { actions: nodeEditorActions, getNodePorts, getNodeById } = useNodeEditorApi();
   // Use split hooks for better performance
   const editingState = useInlineEditingState();
   const { isEditing, startEditing, updateValue, confirmEdit, cancelEdit } = useInlineEditingActions();
   const { actions: interactionActions } = useCanvasInteractionActions();
   const resizeState = useCanvasInteractionResizeState();
-  const groupManager = useGroupManagement({ autoUpdateMembership: false });
   const nodeDefinition = useNodeDefinition(node.type);
   const externalDataRef = useExternalDataRef(node.id);
   const externalDataState = useExternalData(node, externalDataRef);
 
   const isGroup = React.useMemo(() => hasGroupBehavior(nodeDefinition), [nodeDefinition]);
 
-  const groupChildren = React.useMemo(
-    () => (isGroup ? groupManager.getGroupChildren(node.id) : []),
-    [isGroup, groupManager, node.id],
+  const groupChildrenCount = useNodeEditorSelector(
+    (state) => {
+      if (!isGroup) {
+        return 0;
+      }
+      return Object.values(state.nodes).reduce((acc, candidate) => {
+        return acc + (candidate.parentId === node.id ? 1 : 0);
+      }, 0);
+    },
+    { areEqual: (a, b) => a === b },
   );
 
   const derivedState = React.useMemo(() => {
@@ -86,9 +91,9 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
       resizeState,
       dragOffset,
       isDragging,
-      groupChildren.length,
+      groupChildrenCount,
     );
-  }, [node, nodeDefinition, resizeState, dragOffset, isDragging, groupChildren.length]);
+  }, [node, nodeDefinition, resizeState, dragOffset, isDragging, groupChildrenCount]);
 
   // Whether this node has an unknown/unregistered type
   const isUnknownType = nodeDefinition === undefined;
@@ -186,7 +191,7 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
       displaySize={derivedState.displayGeometry.displaySize}
       isVisuallyDragging={derivedState.isVisuallyDragging}
       hasChildren={derivedState.hasChildren}
-      groupChildrenCount={groupChildren.length}
+      groupChildrenCount={groupChildrenCount}
       nodeDefinition={nodeDefinition}
       isUnknownType={isUnknownType}
       externalDataState={externalDataState}
@@ -210,7 +215,7 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
       onPortPointerCancel={onPortPointerCancel}
       connectingPort={connectingPort}
       hoveredPort={hoveredPort}
-      connectedPorts={connectedPorts}
+      connectedPortIds={connectedPortIds}
       connectablePorts={connectablePorts}
       candidatePortId={candidatePortId}
     />

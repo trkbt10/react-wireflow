@@ -3,7 +3,7 @@
  * Renders all connections and handles connection interactions.
  */
 import * as React from "react";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
 import { ConnectionRenderer } from "./ConnectionRenderer";
 import { DragConnection } from "./DragConnection";
 import styles from "./ConnectionLayer.module.css";
@@ -17,11 +17,11 @@ export type ConnectionLayerProps = {
  * Each ConnectionRenderer derives its own interaction state from context.
  */
 const ConnectionLayerComponent: React.FC<ConnectionLayerProps> = ({ className }) => {
-  const { state: nodeEditorState } = useNodeEditor();
+  const connections = useNodeEditorSelector((state) => state.connections);
 
   return (
     <svg className={className ? `${styles.root} ${className}` : styles.root} data-connection-layer="root">
-      {Object.values(nodeEditorState.connections).map((connection) => (
+      {Object.values(connections).map((connection) => (
         <ConnectionRenderer key={connection.id} connection={connection} />
       ))}
       <DragConnection />

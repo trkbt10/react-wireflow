@@ -32,11 +32,19 @@ export type PortPositionContextValue = {
   calculateNodePortPositions: (node: PortPositionNode) => NodePortPositions;
 };
 
+export type PortPositionSettingsValue = {
+  config: PortPositionConfig;
+  behavior?: PortPositionBehavior;
+};
+
 /**
  * Context for accessing pre-computed port positions
  */
 export const PortPositionContext = React.createContext<PortPositionContextValue | null>(null);
 PortPositionContext.displayName = "PortPositionContext";
+
+export const PortPositionSettingsContext = React.createContext<PortPositionSettingsValue | null>(null);
+PortPositionSettingsContext.displayName = "PortPositionSettingsContext";
 
 /**
  * Hook to access port positions
@@ -45,6 +53,18 @@ export function usePortPositions(): PortPositionContextValue {
   const context = React.useContext(PortPositionContext);
   if (!context) {
     throw new Error("usePortPositions must be used within a PortPositionProvider");
+  }
+  return context;
+}
+
+/**
+ * Returns only the stable settings used for port position calculation (config/behavior).
+ * Use this when you don't need to subscribe to computed `portPositions`.
+ */
+export function usePortPositionSettings(): PortPositionSettingsValue {
+  const context = React.useContext(PortPositionSettingsContext);
+  if (!context) {
+    throw new Error("usePortPositionSettings must be used within a PortPositionProvider");
   }
   return context;
 }

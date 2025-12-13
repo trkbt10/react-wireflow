@@ -5,6 +5,7 @@ import * as React from "react";
 import { useNodeEditor } from "../../contexts/composed/node-editor/context";
 import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitionList } from "../../contexts/node-definitions/hooks/useNodeDefinitionList";
+import { useResizeObserver } from "../../hooks/useResizeObserver";
 import {
   FloatingPanelFrame,
   FloatingPanelHeader,
@@ -33,6 +34,7 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
   const { state: canvasState, actions: canvasActions, canvasRef: editorCanvasRef } = useNodeCanvas();
   const nodeDefinitions = useNodeDefinitionList();
   const canvasRef = React.useRef<HTMLDivElement>(null);
+  const { rect: canvasRect } = useResizeObserver(canvasRef, { box: "border-box" });
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragStart, setDragStart] = React.useState<{
     x: number;
@@ -52,39 +54,17 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
     }));
   }, [width, height]);
 
-  React.useLayoutEffect(() => {
-    if (typeof ResizeObserver === "undefined") {
+  React.useEffect(() => {
+    if (!canvasRect) {
       return;
     }
-
-    const element = canvasRef.current;
-    if (!element) {
-      return;
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) {
-        return;
+    setCanvasSize((prev) => {
+      if (prev.width === canvasRect.width && prev.height === canvasRect.height) {
+        return prev;
       }
-
-      const nextWidth = entry.contentRect.width;
-      const nextHeight = entry.contentRect.height;
-
-      setCanvasSize((prev) => {
-        if (prev.width === nextWidth && prev.height === nextHeight) {
-          return prev;
-        }
-        return { width: nextWidth, height: nextHeight };
-      });
+      return { width: canvasRect.width, height: canvasRect.height };
     });
-
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+  }, [canvasRect?.width, canvasRect?.height]);
 
   // Calculate bounds of all nodes
   const nodeBounds = React.useMemo(() => {

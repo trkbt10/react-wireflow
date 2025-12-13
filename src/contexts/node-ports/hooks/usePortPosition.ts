@@ -5,8 +5,8 @@ import * as React from "react";
 import type { Position, Size } from "../../../types/core";
 import type { PortPosition, PortPositionNode } from "../../../types/portPosition";
 import type { ComputedPortPosition } from "../../../types/NodeDefinition";
-import { useNodeEditor } from "../../composed/node-editor/context";
-import { usePortPositions } from "../context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../composed/node-editor/context";
+import { usePortPositionSettings } from "../context";
 import { useNodeDefinitions } from "../../node-definitions/context";
 import { computeNodePortPositions, createDefaultPortCompute } from "../../../core/port/spatiality/computePositions";
 import { getNodeSize } from "../../../utils/boundingBoxUtils";
@@ -45,11 +45,17 @@ export function useDynamicPortPosition(
   portId: string,
   options?: PortPositionOptions,
 ): PortPosition | undefined {
-  const { state, getNodePorts } = useNodeEditor();
-  const { config, behavior } = usePortPositions();
+  const { getNodePorts } = useNodeEditorApi();
+  const currentNode = useNodeEditorSelector((state) => state.nodes[nodeId]);
+  const { config, behavior } = usePortPositionSettings();
   const { registry } = useNodeDefinitions();
-  const currentNode = React.useMemo(() => state.nodes[nodeId], [state.nodes, nodeId]);
-  const nodePorts = React.useMemo(() => getNodePorts(nodeId), [getNodePorts, nodeId]);
+  const nodePorts = React.useMemo(() => {
+    try {
+      return getNodePorts(nodeId);
+    } catch {
+      return [];
+    }
+  }, [getNodePorts, nodeId]);
   const nodeDefinition = React.useMemo(
     () => (currentNode ? registry.get(currentNode.type) : undefined),
     [registry, currentNode],

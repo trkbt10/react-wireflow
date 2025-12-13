@@ -4,7 +4,7 @@
  * during node and connection rendering, especially for performance-critical drag operations
  */
 import * as React from "react";
-import { Node, Connection, NodeId, ConnectionId } from "../../../../types/core";
+import { Node, Connection, NodeId, ConnectionId, PortId } from "../../../../types/core";
 import type { NodeDefinition } from "../../../../types/NodeDefinition";
 import { nodeHasGroupBehavior } from "../../../../types/behaviors";
 import { hasPositionChanged, hasSizeChanged } from "../../../../core/geometry/comparators";
@@ -98,6 +98,59 @@ export function useConnectedPorts(connections: Record<ConnectionId, Connection>)
       connectedPorts.add(createPortKey(connection.toNodeId, connection.toPortId));
     });
     return connectedPorts;
+  }, [connections]);
+}
+
+const arePortIdSetsEqual = (a: ReadonlySet<PortId>, b: ReadonlySet<PortId>): boolean => {
+  if (a === b) {
+    return true;
+  }
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const id of a) {
+    if (!b.has(id)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Memoized per-node connected port ids.
+ * Ensures stable Set references for nodes whose connected port ids did not change.
+ */
+export function useConnectedPortIdsByNode(
+  connections: Record<ConnectionId, Connection>,
+): ReadonlyMap<NodeId, ReadonlySet<PortId>> {
+  const previousRef = React.useRef<ReadonlyMap<NodeId, ReadonlySet<PortId>>>(new Map());
+
+  return React.useMemo(() => {
+    const nextByNode = new Map<NodeId, Set<PortId>>();
+    Object.values(connections).forEach((connection) => {
+      const fromSet = nextByNode.get(connection.fromNodeId) ?? new Set<PortId>();
+      fromSet.add(connection.fromPortId);
+      nextByNode.set(connection.fromNodeId, fromSet);
+
+      const toSet = nextByNode.get(connection.toNodeId) ?? new Set<PortId>();
+      toSet.add(connection.toPortId);
+      nextByNode.set(connection.toNodeId, toSet);
+    });
+
+    const previous = previousRef.current;
+    const stableNext = new Map<NodeId, ReadonlySet<PortId>>();
+
+    for (const [nodeId, nextSet] of nextByNode.entries()) {
+      const prevSet = previous.get(nodeId);
+      if (prevSet && arePortIdSetsEqual(prevSet, nextSet)) {
+        stableNext.set(nodeId, prevSet);
+      } else {
+        stableNext.set(nodeId, nextSet);
+      }
+    }
+
+    previousRef.current = stableNext;
+    return stableNext;
   }, [connections]);
 }
 

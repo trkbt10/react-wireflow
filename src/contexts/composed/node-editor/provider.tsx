@@ -18,7 +18,9 @@ import { snapToGrid } from "./utils/gridSnap";
 import { findContainingGroup, getGroupChildren, isNodeInsideGroup } from "./utils/groupOperations";
 import { useStabilizedControlledData, areNodeEditorDataEqual } from "./utils/controlledData";
 import { hasGroupBehavior } from "../../../types/behaviors";
-import { useConnectedPorts } from "./utils/renderOptimizationMemoization";
+import { useConnectedPorts, useConnectedPortIdsByNode } from "./utils/renderOptimizationMemoization";
+import type { NodeEditorApiValue } from "./context";
+import { NodeEditorApiContext } from "./context";
 
 export type NodeEditorProviderProps = {
   children: React.ReactNode;
@@ -47,6 +49,16 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
 }) => {
   const { registry } = React.useContext(NodeDefinitionContext);
   const portResolver = React.useMemo(() => createCachedPortResolver(), []);
+  const subscribersRef = React.useRef(new Set<() => void>());
+  const subscribe = React.useCallback((listener: () => void) => {
+    subscribersRef.current.add(listener);
+    return () => {
+      subscribersRef.current.delete(listener);
+    };
+  }, []);
+  const notifySubscribers = React.useCallback(() => {
+    subscribersRef.current.forEach((listener) => listener());
+  }, []);
   const pendingControlledStateRef = React.useRef<NodeEditorData | null>(null);
   const [controlledRenderTick, setControlledRenderTick] = React.useState(0);
 
@@ -91,6 +103,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
         stateRef.current = newState;
         setControlledRenderTick((tick) => tick + 1);
         onDataChangeRef.current?.(newState);
+        notifySubscribers();
         return;
       }
       // Uncontrolled: dispatch internally and notify external listener with computed next state
@@ -98,8 +111,9 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
       stateRef.current = nextState;
       internalDispatch(action);
       onDataChangeRef.current?.(nextState);
+      notifySubscribers();
     },
-    [isControlled],
+    [isControlled, notifySubscribers],
   );
 
   React.useEffect(() => {
@@ -113,6 +127,16 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
       }
     }
   }, [isControlled, stabilizedControlledData, controlledRenderTick]);
+
+  React.useEffect(() => {
+    if (!isControlled) {
+      return;
+    }
+    if (pendingControlledStateRef.current) {
+      return;
+    }
+    notifySubscribers();
+  }, [isControlled, stabilizedControlledData, notifySubscribers]);
 
   const boundActions = React.useMemo(() => bindActionCreators(nodeEditorActions, dispatch), [dispatch]);
 
@@ -233,11 +257,12 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
       if (!aGroup && bGroup) {
         return 1;
       }
-      return 0;
+      return a.id.localeCompare(b.id);
     });
   }, [state.nodes, groupNodeTypes]);
 
   const connectedPorts = useConnectedPorts(state.connections);
+  const connectedPortIdsByNode = useConnectedPortIdsByNode(state.connections);
   const getState = React.useCallback(() => stateRef.current, []);
 
   const getNodeById = React.useCallback(
@@ -246,6 +271,9 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
     },
     [],
   );
+
+  const registryRef = React.useRef(registry);
+  registryRef.current = registry;
 
   React.useEffect(() => {
     portResolver.clearCache();
@@ -284,6 +312,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
       actionCreators: nodeEditorActions,
       sortedNodes,
       connectedPorts,
+      connectedPortIdsByNode,
       isLoading,
       isSaving,
       handleSave,
@@ -308,6 +337,7 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
       portLookupMap,
       sortedNodes,
       connectedPorts,
+      connectedPortIdsByNode,
       settings,
       settingsManager,
       updateSetting,
@@ -315,7 +345,38 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
     ],
   );
 
-  return <NodeEditorContext.Provider value={contextValue}>{children}</NodeEditorContext.Provider>;
+  const getNodePortsFromState = React.useCallback(
+    (nodeId: NodeId): Port[] => {
+      const node = stateRef.current.nodes[nodeId];
+      if (!node) {
+        return [];
+      }
+      const definition = registryRef.current.get(node.type);
+      if (!definition) {
+        throw new Error(`No node definition registered for type "${node.type}"`);
+      }
+      return portResolver.getNodePorts(node, definition);
+    },
+    [portResolver],
+  );
+
+  const apiValue = React.useMemo<NodeEditorApiValue>(
+    () => ({
+      dispatch,
+      actions: boundActions,
+      getState,
+      subscribe,
+      getNodePorts: getNodePortsFromState,
+      getNodeById,
+    }),
+    [dispatch, boundActions, getState, subscribe, getNodePortsFromState, getNodeById],
+  );
+
+  return (
+    <NodeEditorApiContext.Provider value={apiValue}>
+      <NodeEditorContext.Provider value={contextValue}>{children}</NodeEditorContext.Provider>
+    </NodeEditorApiContext.Provider>
+  );
 };
 
 export type { NodeEditorData };

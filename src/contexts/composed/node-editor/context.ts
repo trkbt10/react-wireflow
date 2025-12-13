@@ -49,6 +49,12 @@ export type NodeEditorContextValue = {
    * Do not mutate.
    */
   connectedPorts: Set<string>;
+  /**
+   * Per-node connected port ids (portId only; nodeId already known).
+   * Values are stable references when contents are unchanged.
+   * Do not mutate.
+   */
+  connectedPortIdsByNode: ReadonlyMap<NodeId, ReadonlySet<string>>;
   isLoading: boolean;
   isSaving: boolean;
   handleSave: () => Promise<void>;
@@ -82,6 +88,18 @@ export type NodeEditorContextValue = {
 export const NodeEditorContext = React.createContext<NodeEditorContextValue | null>(null);
 NodeEditorContext.displayName = "NodeEditorContext";
 
+export type NodeEditorApiValue = {
+  dispatch: React.Dispatch<NodeEditorAction>;
+  actions: BoundActionCreators<typeof nodeEditorActions>;
+  getState: () => NodeEditorData;
+  subscribe: (listener: () => void) => () => void;
+  getNodePorts: (nodeId: NodeId) => Port[];
+  getNodeById: (nodeId: NodeId) => Node | undefined;
+};
+
+export const NodeEditorApiContext = React.createContext<NodeEditorApiValue | null>(null);
+NodeEditorApiContext.displayName = "NodeEditorApiContext";
+
 export const useNodeEditor = (): NodeEditorContextValue => {
   const context = React.useContext(NodeEditorContext);
   if (!context) {
@@ -89,6 +107,39 @@ export const useNodeEditor = (): NodeEditorContextValue => {
   }
   return context;
 };
+
+export const useNodeEditorApi = (): NodeEditorApiValue => {
+  const context = React.useContext(NodeEditorApiContext);
+  if (!context) {
+    throw new Error("useNodeEditorApi must be used within a NodeEditorProvider");
+  }
+  return context;
+};
+
+/**
+ * Selects a derived value from the node editor state without forcing consumers
+ * to re-render for unrelated state changes.
+ */
+export function useNodeEditorSelector<T>(
+  selector: (state: NodeEditorData) => T,
+  options?: { areEqual?: (a: T, b: T) => boolean },
+): T {
+  const { subscribe, getState } = useNodeEditorApi();
+  const previousRef = React.useRef<T | null>(null);
+
+  const getSnapshot = React.useCallback((): T => {
+    const next = selector(getState());
+    const previous = previousRef.current;
+    const areEqual = options?.areEqual;
+    if (previous !== null && areEqual && areEqual(previous, next)) {
+      return previous;
+    }
+    previousRef.current = next;
+    return next;
+  }, [getState, selector, options?.areEqual]);
+
+  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
 
 export const useNodeEditorActions = () => {
   const { actions } = useNodeEditor();

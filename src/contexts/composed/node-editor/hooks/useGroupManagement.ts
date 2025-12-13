@@ -89,7 +89,7 @@ export const useGroupManagement = (options: UseGroupManagementOptions = {}): Use
         clearTimeout(updateMembershipTimeoutRef.current);
       }
     };
-  }, [autoUpdateMembership, membershipUpdateDelay, updateAllGroupMembership]);
+  }, [autoUpdateMembership, dragState, membershipUpdateDelay, state.nodes, nodeDefinitions, updateAllGroupMembership]);
 
   const isNodeInGroup = React.useCallback(
     (nodeId: NodeId): boolean => {

@@ -3,7 +3,7 @@
  * Renders a single connection, deriving interaction state from context.
  */
 import * as React from "react";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
 import {
   useEditorActionState,
   useSelectedNodeIdsSet,
@@ -11,10 +11,8 @@ import {
 } from "../../contexts/composed/EditorActionStateContext";
 import { useNodeCanvasUtils } from "../../contexts/composed/canvas/viewport/context";
 import {
-  useCanvasInteractionState,
-  useDraggedNodeIdsSet,
+  useCanvasInteractionSelector,
 } from "../../contexts/composed/canvas/interaction/context";
-import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePortPosition";
 import { useRenderers } from "../../contexts/RendererContext";
 import { useInteractionSettings } from "../../contexts/interaction-settings/context";
 import { usePointerShortcutMatcher } from "../../contexts/interaction-settings/hooks/usePointerShortcutMatcher";
@@ -22,7 +20,6 @@ import { getPreviewPosition } from "../../core/geometry/position";
 import { hasPositionChanged, hasSizeChanged } from "../../core/geometry/comparators";
 import { getNodeResizeSize } from "../../core/node/resizeState";
 import { ensurePort } from "../../core/port/identity/guards";
-import { createPortKey } from "../../core/port/identity/key";
 import type { Connection, Node as EditorNode, Port as CorePort, Position, Size } from "../../types/core";
 import type { PointerType } from "../../types/interaction";
 
@@ -138,19 +135,25 @@ ConnectionRendererInner.displayName = "ConnectionRendererInner";
 // ============================================================================
 
 const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = ({ connection }) => {
-  const { state: nodeEditorState, portLookupMap } = useNodeEditor();
+  const { getNodePorts } = useNodeEditorApi();
+  const nodesForConnection = useNodeEditorSelector(
+    (state) => ({
+      fromNode: state.nodes[connection.fromNodeId],
+      toNode: state.nodes[connection.toNodeId],
+    }),
+    {
+      areEqual: (a, b) => a.fromNode === b.fromNode && a.toNode === b.toNode,
+    },
+  );
   const { state: actionState, actions: actionActions } = useEditorActionState();
   const utils = useNodeCanvasUtils();
-  const interactionState = useCanvasInteractionState();
   const interactionSettings = useInteractionSettings();
   const matchesPointerAction = usePointerShortcutMatcher();
 
   // Use shared memoized Sets from context
   const selectedConnectionIdsSet = useSelectedConnectionIdsSet();
   const selectedNodeIdsSet = useSelectedNodeIdsSet();
-  const draggedNodeIdsSet = useDraggedNodeIdsSet();
 
-  const { dragState, resizeState } = interactionState;
   const { hoveredConnectionId } = actionState;
 
   // Derive interaction state for this connection
@@ -159,36 +162,82 @@ const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = 
   const isAdjacentToSelectedNode =
     selectedNodeIdsSet.has(connection.fromNodeId) || selectedNodeIdsSet.has(connection.toNodeId);
 
-  // Derive drag offsets
-  const isFromDragging = draggedNodeIdsSet?.has(connection.fromNodeId) ?? false;
-  const isToDragging = draggedNodeIdsSet?.has(connection.toNodeId) ?? false;
-  const fromDragOffset = isFromDragging && dragState ? dragState.offset : null;
-  const toDragOffset = isToDragging && dragState ? dragState.offset : null;
+  const interactionPreview = useCanvasInteractionSelector(
+    (state) => {
+      const drag = state.dragState;
+      const isDragged = (nodeId: string): boolean => {
+        if (!drag) {
+          return false;
+        }
+        if (drag.nodeIds.includes(nodeId)) {
+          return true;
+        }
+        for (const childIds of Object.values(drag.affectedChildNodes)) {
+          if (childIds.includes(nodeId)) {
+            return true;
+          }
+        }
+        return false;
+      };
 
-  // Derive resize sizes
-  const fromResizeSize = getNodeResizeSize(resizeState, connection.fromNodeId);
-  const toResizeSize = getNodeResizeSize(resizeState, connection.toNodeId);
+      const fromDragOffset = drag && isDragged(connection.fromNodeId) ? drag.offset : null;
+      const toDragOffset = drag && isDragged(connection.toNodeId) ? drag.offset : null;
+
+      const fromResizeSize = getNodeResizeSize(state.resizeState, connection.fromNodeId);
+      const toResizeSize = getNodeResizeSize(state.resizeState, connection.toNodeId);
+
+      return { fromDragOffset, toDragOffset, fromResizeSize, toResizeSize };
+    },
+    {
+      areEqual: (a, b) => {
+        if (hasPositionChanged(a.fromDragOffset, b.fromDragOffset)) {
+          return false;
+        }
+        if (hasPositionChanged(a.toDragOffset, b.toDragOffset)) {
+          return false;
+        }
+        if (hasSizeChanged(a.fromResizeSize, b.fromResizeSize)) {
+          return false;
+        }
+        if (hasSizeChanged(a.toResizeSize, b.toResizeSize)) {
+          return false;
+        }
+        return true;
+      },
+    },
+  );
+
+  const { fromDragOffset, toDragOffset, fromResizeSize, toResizeSize } = interactionPreview;
 
   // Get nodes
-  const fromNode = nodeEditorState.nodes[connection.fromNodeId];
-  const toNode = nodeEditorState.nodes[connection.toNodeId];
+  const { fromNode, toNode } = nodesForConnection;
 
-  // Get dynamic port positions (used for validation in event handlers)
-  const fromPortPos = useDynamicConnectionPoint(connection.fromNodeId, connection.fromPortId);
-  const toPortPos = useDynamicConnectionPoint(connection.toNodeId, connection.toPortId);
+  const safeGetNodePorts = React.useCallback(
+    (nodeId: string): CorePort[] => {
+      try {
+        return getNodePorts(nodeId);
+      } catch {
+        return [];
+      }
+    },
+    [getNodePorts],
+  );
 
-  // Get ports with fallback
-  const fromRaw = portLookupMap.get(createPortKey(connection.fromNodeId, connection.fromPortId))?.port as unknown;
-  const toRaw = portLookupMap.get(createPortKey(connection.toNodeId, connection.toPortId))?.port as unknown;
+  const fromPortCandidate = safeGetNodePorts(connection.fromNodeId).find((p) => p.id === connection.fromPortId) as
+    | CorePort
+    | undefined;
+  const toPortCandidate = safeGetNodePorts(connection.toNodeId).find((p) => p.id === connection.toPortId) as
+    | CorePort
+    | undefined;
 
-  const fromPort: CorePort = ensurePort(fromRaw, {
+  const fromPort: CorePort = ensurePort(fromPortCandidate, {
     id: connection.fromPortId,
     nodeId: connection.fromNodeId,
     type: "output",
     label: connection.fromPortId,
     position: "right",
   });
-  const toPort: CorePort = ensurePort(toRaw, {
+  const toPort: CorePort = ensurePort(toPortCandidate, {
     id: connection.toPortId,
     nodeId: connection.toNodeId,
     type: "input",
@@ -198,7 +247,7 @@ const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = 
 
   // Event handlers using useEffectEvent for stable references
   const handlePointerDown = React.useEffectEvent((e: React.PointerEvent, connectionId: string) => {
-    if (!fromNode || !toNode || !fromPortPos || !toPortPos) {
+    if (!fromNode || !toNode) {
       return;
     }
 

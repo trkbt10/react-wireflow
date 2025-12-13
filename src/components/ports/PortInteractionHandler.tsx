@@ -3,8 +3,8 @@
  */
 import * as React from "react";
 import type { Port, NodeId, Position } from "../../types/core";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
-import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
+import { useNodeEditorApi } from "../../contexts/composed/node-editor/context";
+import { useEditorActionStateActions, useEditorActionStateState } from "../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteraction } from "../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasUtils } from "../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
@@ -36,8 +36,9 @@ export type PortInteractionHandlerProps = {
  * Handles all port interaction logic including connections and hover states
  */
 export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ port, children }) => {
-  const { state: nodeEditorState, getNodePorts } = useNodeEditor();
-  const { state: actionState, actions: actionActions } = useEditorActionState();
+  const { getState, getNodePorts } = useNodeEditorApi();
+  const actionState = useEditorActionStateState();
+  const { actions: actionActions } = useEditorActionStateActions();
   const { state: interactionState, actions: interactionActions } = useCanvasInteraction();
   const utils = useNodeCanvasUtils();
   const { registry } = useNodeDefinitions();
@@ -56,6 +57,7 @@ export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ 
 
   // Handle connection drag
   const handleConnectionDragStartImpl = React.useEffectEvent((_event: PointerEvent, _portElement: HTMLElement) => {
+    const nodeEditorState = getState();
     // Calculate connectable ports using resolved ports and NodeDefinitions
     const connectablePorts = computeConnectablePortIds({
       fallbackPort: actionPort,
@@ -114,6 +116,9 @@ export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ 
   );
 
   const handlePointerEnterImpl = React.useEffectEvent((_event: React.PointerEvent) => {
+    if (interactionState.dragState) {
+      return;
+    }
     actionActions.setHoveredPort(actionPort);
   });
 
@@ -122,6 +127,9 @@ export const PortInteractionHandler: React.FC<PortInteractionHandlerProps> = ({ 
   }, []);
 
   const handlePointerLeaveImpl = React.useEffectEvent((_event: React.PointerEvent) => {
+    if (interactionState.dragState) {
+      return;
+    }
     actionActions.setHoveredPort(null);
   });
 
