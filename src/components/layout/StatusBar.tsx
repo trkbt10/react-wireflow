@@ -2,12 +2,19 @@
  * @file Status bar component
  */
 import * as React from "react";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
-import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
-import { useCanvasInteraction } from "../../contexts/composed/canvas/interaction/context";
-import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
+import { useNodeEditor, useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
+import { useEditorActionSelectionCounts } from "../../contexts/composed/EditorActionStateContext";
+import { useCanvasInteractionSelector } from "../../contexts/composed/canvas/interaction/context";
+import {
+  useNodeCanvasGridSettings,
+  useNodeCanvasPanActive,
+  useNodeCanvasViewportOffset,
+  useNodeCanvasViewportScale,
+} from "../../contexts/composed/canvas/viewport/context";
 import type { SettingsManager as _SettingsManager } from "../../settings/SettingsManager";
 import { StatusSection } from "./StatusSection";
+import { hasPositionChanged } from "../../core/geometry/comparators";
+import type { Position } from "../../types/core";
 import styles from "./StatusBar.module.css";
 
 export type StatusBarProps = {
@@ -15,6 +22,25 @@ export type StatusBarProps = {
   isSaving?: boolean;
   settingsManager?: _SettingsManager;
 };
+
+const PositionStatusSection: React.FC = React.memo(() => {
+  const viewportOffset = useNodeCanvasViewportOffset();
+  const dragOffset = useCanvasInteractionSelector(
+    (state): Position | null => state.dragState?.offset ?? null,
+    { areEqual: (a, b) => !hasPositionChanged(a, b) },
+  );
+
+  const cursorPosition = React.useMemo(() => {
+    if (dragOffset) {
+      return `Offset: (${Math.round(dragOffset.x)}, ${Math.round(dragOffset.y)})`;
+    }
+    return `Canvas: (${Math.round(viewportOffset.x)}, ${Math.round(viewportOffset.y)})`;
+  }, [dragOffset, viewportOffset.x, viewportOffset.y]);
+
+  return <StatusSection label="Position" value={cursorPosition} />;
+});
+
+PositionStatusSection.displayName = "PositionStatusSection";
 
 /**
  * StatusBar - Displays current editor state information
@@ -30,17 +56,26 @@ export const StatusBar: React.FC<StatusBarProps> = React.memo(({
   const autoSave = autoSaveProp ?? settings.autoSave;
   const isSaving = isSavingProp ?? editorIsSaving;
   const settingsManager = settingsManagerProp ?? editorSettingsManager;
-  const { state: nodeEditorState } = useNodeEditor();
-  const { state: actionState } = useEditorActionState();
-  const { state: interactionState, actions: _interactionActions } = useCanvasInteraction();
-  const { state: canvasState } = useNodeCanvas();
 
-  const selectedNodeCount = actionState.selectedNodeIds.length;
-  const selectedConnectionCount = actionState.selectedConnectionIds.length;
-  const totalNodes = Object.keys(nodeEditorState.nodes).length;
-  const totalConnections = Object.keys(nodeEditorState.connections).length;
+  const selectedCounts = useEditorActionSelectionCounts();
+  const selectedNodeCount = selectedCounts.selectedNodeCount;
+  const selectedConnectionCount = selectedCounts.selectedConnectionCount;
 
-  const zoomPercentage = Math.round(canvasState.viewport.scale * 100);
+  const totals = useNodeEditorSelector(
+    (state) => ({
+      totalNodes: Object.keys(state.nodes).length,
+      totalConnections: Object.keys(state.connections).length,
+    }),
+    {
+      areEqual: (a, b) => a.totalNodes === b.totalNodes && a.totalConnections === b.totalConnections,
+    },
+  );
+
+  const totalNodes = totals.totalNodes;
+  const totalConnections = totals.totalConnections;
+
+  const viewportScale = useNodeCanvasViewportScale();
+  const zoomPercentage = Math.round(viewportScale * 100);
 
   const selectionValue = React.useMemo(() => {
     if (selectedNodeCount === 0 && selectedConnectionCount === 0) {
@@ -56,48 +91,43 @@ export const StatusBar: React.FC<StatusBarProps> = React.memo(({
     return parts.join(", ");
   }, [selectedNodeCount, selectedConnectionCount]);
 
+  const gridSettings = useNodeCanvasGridSettings();
+
   const gridValue = React.useMemo(() => {
-    if (!canvasState.gridSettings.showGrid) {
+    if (!gridSettings.showGrid) {
       return null;
     }
-    const snapText = canvasState.gridSettings.snapToGrid ? " (Snap ON)" : "";
-    return `${canvasState.gridSettings.size}px${snapText}`;
-  }, [canvasState.gridSettings.showGrid, canvasState.gridSettings.size, canvasState.gridSettings.snapToGrid]);
+    const snapText = gridSettings.snapToGrid ? " (Snap ON)" : "";
+    return `${gridSettings.size}px${snapText}`;
+  }, [gridSettings.showGrid, gridSettings.size, gridSettings.snapToGrid]);
 
-  // Determine operation mode
+  const interactionFlags = useCanvasInteractionSelector(
+    (state) => ({
+      isDragging: Boolean(state.dragState),
+      isSelecting: Boolean(state.selectionBox),
+      isConnecting: Boolean(state.connectionDragState),
+    }),
+    {
+      areEqual: (a, b) => a.isDragging === b.isDragging && a.isSelecting === b.isSelecting && a.isConnecting === b.isConnecting,
+    },
+  );
+  const isPanning = useNodeCanvasPanActive();
+
   const operationMode = React.useMemo((): string => {
-    if (interactionState.dragState) {
+    if (interactionFlags.isDragging) {
       return "Moving";
     }
-    if (interactionState.selectionBox) {
+    if (interactionFlags.isSelecting) {
       return "Selecting";
     }
-    if (interactionState.connectionDragState) {
+    if (interactionFlags.isConnecting) {
       return "Connecting";
     }
-    if (canvasState.isSpacePanning || canvasState.panState.isPanning) {
+    if (isPanning) {
       return "Panning";
     }
     return "Ready";
-  }, [
-    interactionState.dragState,
-    interactionState.selectionBox,
-    interactionState.connectionDragState,
-    canvasState.isSpacePanning,
-    canvasState.panState.isPanning,
-  ]);
-
-  // Get cursor position (if dragging)
-  const cursorPosition = React.useMemo(() => {
-    if (interactionState.dragState) {
-      return `Offset: (${Math.round(interactionState.dragState.offset.x)}, ${Math.round(interactionState.dragState.offset.y)})`;
-    }
-    return `Canvas: (${Math.round(canvasState.viewport.offset.x)}, ${Math.round(canvasState.viewport.offset.y)})`;
-  }, [
-    interactionState.dragState,
-    canvasState.viewport.offset.x,
-    canvasState.viewport.offset.y,
-  ]);
+  }, [interactionFlags.isDragging, interactionFlags.isSelecting, interactionFlags.isConnecting, isPanning]);
 
   return (
     <div className={styles.statusBar} data-testid="status-bar">
@@ -117,7 +147,7 @@ export const StatusBar: React.FC<StatusBarProps> = React.memo(({
       <StatusSection label="Zoom" value={`${zoomPercentage}%`} />
 
       {/* Position */}
-      <StatusSection label="Position" value={cursorPosition} />
+      <PositionStatusSection />
 
       {/* Grid info */}
       {gridValue && <StatusSection label="Grid" value={gridValue} />}

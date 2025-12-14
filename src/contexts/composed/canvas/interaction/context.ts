@@ -265,17 +265,37 @@ export type DragNodeIdsSets = {
 };
 
 export const useDragNodeIdsSets = (): DragNodeIdsSets | null => {
-  const dragState = React.useContext(CanvasInteractionDragStateContext);
-  if (dragState === undefined) {
-    throw new Error("useDragNodeIdsSets must be used within a CanvasInteractionProvider");
-  }
+  const dragMembers = useCanvasInteractionSelector(
+    (state) => {
+      const drag = state.dragState;
+      if (!drag) {
+        return null;
+      }
+      return {
+        nodeIds: drag.nodeIds,
+        affectedChildNodes: drag.affectedChildNodes,
+      };
+    },
+    {
+      areEqual: (a, b) => {
+        if (!a && !b) {
+          return true;
+        }
+        if (!a || !b) {
+          return false;
+        }
+        return a.nodeIds === b.nodeIds && a.affectedChildNodes === b.affectedChildNodes;
+      },
+    },
+  );
+
   return React.useMemo(() => {
-    if (!dragState) {
+    if (!dragMembers) {
       return null;
     }
-    const directlyDraggedNodeIds = new Set<NodeId>(dragState.nodeIds);
+    const directlyDraggedNodeIds = new Set<NodeId>(dragMembers.nodeIds);
     const affectedChildNodeIds = new Set<NodeId>();
-    for (const childIds of Object.values(dragState.affectedChildNodes)) {
+    for (const childIds of Object.values(dragMembers.affectedChildNodes)) {
       for (const id of childIds) {
         affectedChildNodeIds.add(id);
       }
@@ -286,7 +306,7 @@ export const useDragNodeIdsSets = (): DragNodeIdsSets | null => {
       affectedChildNodeIds,
       allDraggedNodeIds,
     };
-  }, [dragState]);
+  }, [dragMembers]);
 };
 
 /**

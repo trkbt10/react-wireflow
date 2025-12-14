@@ -314,6 +314,14 @@ export type EditorActionStateContextValue = EditorActionStateActionsValue & {
 const EditorActionStateStateContext = React.createContext<EditorActionState | null>(null);
 EditorActionStateStateContext.displayName = "EditorActionStateStateContext";
 
+export type EditorActionSelectionCounts = {
+  selectedNodeCount: number;
+  selectedConnectionCount: number;
+};
+
+const EditorActionSelectionCountsContext = React.createContext<EditorActionSelectionCounts | null>(null);
+EditorActionSelectionCountsContext.displayName = "EditorActionSelectionCountsContext";
+
 const EditorActionStateActionsContext = React.createContext<EditorActionStateActionsValue | null>(null);
 EditorActionStateActionsContext.displayName = "EditorActionStateActionsContext";
 
@@ -546,11 +554,21 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
     [state, actionsValue],
   );
 
+  const selectionCounts = React.useMemo<EditorActionSelectionCounts>(
+    () => ({
+      selectedNodeCount: state.selectedNodeIds.length,
+      selectedConnectionCount: state.selectedConnectionIds.length,
+    }),
+    [state.selectedNodeIds, state.selectedConnectionIds],
+  );
+
   return (
     <EditorActionStateStateContext.Provider value={state}>
-      <EditorActionStateActionsContext.Provider value={actionsValue}>
-        <EditorActionStateContext.Provider value={contextValue}>{children}</EditorActionStateContext.Provider>
-      </EditorActionStateActionsContext.Provider>
+      <EditorActionSelectionCountsContext.Provider value={selectionCounts}>
+        <EditorActionStateActionsContext.Provider value={actionsValue}>
+          <EditorActionStateContext.Provider value={contextValue}>{children}</EditorActionStateContext.Provider>
+        </EditorActionStateActionsContext.Provider>
+      </EditorActionSelectionCountsContext.Provider>
     </EditorActionStateStateContext.Provider>
   );
 };
@@ -579,6 +597,18 @@ export const useEditorActionStateState = (): EditorActionState => {
     throw new Error("useEditorActionStateState must be used within an EditorActionStateProvider");
   }
   return state;
+};
+
+/**
+ * Hook to access only selection counts.
+ * Designed to avoid re-renders for hover-only state changes.
+ */
+export const useEditorActionSelectionCounts = (): EditorActionSelectionCounts => {
+  const selectionCounts = React.useContext(EditorActionSelectionCountsContext);
+  if (!selectionCounts) {
+    throw new Error("useEditorActionSelectionCounts must be used within an EditorActionStateProvider");
+  }
+  return selectionCounts;
 };
 
 /**

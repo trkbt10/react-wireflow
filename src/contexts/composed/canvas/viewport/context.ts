@@ -107,6 +107,24 @@ export const useNodeCanvasViewportScale = (): number => {
   );
 };
 
+export const useNodeCanvasPanActive = (): boolean => {
+  const context = React.useContext(NodeCanvasContext);
+  if (!context) {
+    throw new Error("useNodeCanvasPanActive must be used within a NodeCanvasProvider");
+  }
+  return React.useSyncExternalStore(
+    context.store.subscribe,
+    () => {
+      const state = context.store.getState();
+      return state.isSpacePanning || state.panState.isPanning;
+    },
+    () => {
+      const state = context.store.getState();
+      return state.isSpacePanning || state.panState.isPanning;
+    },
+  );
+};
+
 export const useNodeCanvasGridSettings = (): GridSettings => {
   const context = React.useContext(NodeCanvasContext);
   if (!context) {
