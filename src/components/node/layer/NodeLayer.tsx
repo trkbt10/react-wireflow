@@ -60,7 +60,7 @@ type NodeItemProps = {
   NodeComponent: React.ComponentType<NodeViewProps>;
 };
 
-const NodeItem: React.FC<NodeItemProps> = ({
+const NodeItemComponent: React.FC<NodeItemProps> = ({
   nodeId,
   isSelected,
   isDragging,
@@ -107,6 +107,9 @@ const NodeItem: React.FC<NodeItemProps> = ({
     />
   );
 };
+
+const NodeItem = React.memo(NodeItemComponent);
+NodeItem.displayName = "NodeItem";
 
 /**
  * NodeLayer - Renders all nodes with optimized performance

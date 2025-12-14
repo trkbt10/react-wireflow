@@ -7,14 +7,15 @@ import type { NodeDefinition } from "../../../../types/NodeDefinition";
 import { hasGroupBehavior } from "../../../../types/behaviors";
 
 type UseNodeDropParams = {
-  nodes: NodeEditorData["nodes"];
   nodeDefinitions: NodeDefinition[];
+  getState: () => NodeEditorData;
   updateNode: (nodeId: NodeId, updates: Partial<NodeEditorData["nodes"][NodeId]>) => void;
 };
 
-export const useNodeDrop = ({ nodes, nodeDefinitions, updateNode }: UseNodeDropParams) => {
+export const useNodeDrop = ({ nodeDefinitions, getState, updateNode }: UseNodeDropParams) => {
   return React.useEffectEvent(
     (draggedNodeId: NodeId, targetNodeId: NodeId, position: "before" | "inside" | "after") => {
+      const { nodes } = getState();
       const draggedNode = nodes[draggedNodeId];
       const targetNode = nodes[targetNodeId];
 

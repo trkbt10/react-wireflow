@@ -3,8 +3,10 @@
  */
 import type { Node, NodeId } from "../../../types/core";
 
+export type NodeTreeNode = Pick<Node, "id" | "type" | "data" | "locked" | "visible" | "expanded" | "order" | "parentId">;
+
 export type NodeTreeItemProps = {
-  node: Node;
+  node: NodeTreeNode;
   level: number;
   isSelected: boolean;
   onSelect: (nodeId: NodeId, multiSelect: boolean) => void;
@@ -13,7 +15,7 @@ export type NodeTreeItemProps = {
   onToggleExpand?: (nodeId: NodeId) => void;
   onDeleteNode?: (nodeId: NodeId) => void;
   onUpdateTitle?: (nodeId: NodeId, title: string) => void;
-  childNodes: Node[];
+  childNodeIds: readonly NodeId[];
   onNodeDrop: (draggedNodeId: NodeId, targetNodeId: NodeId, position: "before" | "inside" | "after") => void;
 };
 

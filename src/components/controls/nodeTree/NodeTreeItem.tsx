@@ -22,14 +22,14 @@ const NodeTreeItemComponent: React.FC<NodeTreeItemProps> = ({
   onToggleExpand,
   onDeleteNode,
   onUpdateTitle,
-  childNodes,
+  childNodeIds,
   onNodeDrop,
 }) => {
   const { t } = useI18n();
   const nodeDefinitions = useNodeDefinitionList();
   const def = React.useMemo(() => nodeDefinitions.find((d) => d.type === node.type), [nodeDefinitions, node.type]);
   const isGroup = hasGroupBehavior(def);
-  const hasChildren = isGroup && childNodes.length > 0;
+  const hasChildren = isGroup && childNodeIds.length > 0;
   const isExpanded = isGroup && node.expanded !== false;
 
   const isDraggingText = React.useRef(false);
@@ -92,10 +92,10 @@ const NodeTreeItemComponent: React.FC<NodeTreeItemProps> = ({
 
       {hasChildren &&
         isExpanded &&
-        childNodes.map((childNode) => (
+        childNodeIds.map((childNodeId) => (
           <ConnectedNodeTreeItem
-            key={childNode.id}
-            nodeId={childNode.id}
+            key={childNodeId}
+            nodeId={childNodeId}
             level={level + 1}
             onNodeDrop={onNodeDrop}
           />

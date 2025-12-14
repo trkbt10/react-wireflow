@@ -2,43 +2,74 @@
  * @file ConnectedNodeTreeItem container component
  */
 import * as React from "react";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../../contexts/composed/node-editor/context";
 import { useEditorActionState } from "../../../contexts/composed/EditorActionStateContext";
 import { useNodeDefinitionList } from "../../../contexts/node-definitions/hooks/useNodeDefinitionList";
 import { hasGroupBehavior } from "../../../types/behaviors";
 import type { NodeId } from "../../../types/core";
 import { NodeTreeItem } from "./NodeTreeItem";
-import type { ConnectedNodeTreeItemProps } from "./types";
+import type { ConnectedNodeTreeItemProps, NodeTreeNode } from "./types";
+import { getSortedChildNodeIds } from "./utils/nodeTreeIndex";
+import { areNodeIdArraysEqual } from "./utils/areNodeIdArraysEqual";
 
-export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
+function areNodeTreeNodesEqual(a: NodeTreeNode | null, b: NodeTreeNode | null): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return (
+    a.id === b.id &&
+    a.type === b.type &&
+    a.parentId === b.parentId &&
+    a.order === b.order &&
+    a.locked === b.locked &&
+    a.visible === b.visible &&
+    a.expanded === b.expanded &&
+    a.data?.title === b.data?.title
+  );
+}
+
+const ConnectedNodeTreeItemComponent: React.FC<ConnectedNodeTreeItemProps> = ({
   nodeId,
   level,
   onNodeDrop,
 }) => {
-  const { state: editorState, actions } = useNodeEditor();
+  const { actions, getState } = useNodeEditorApi();
   const { state: actionState, actions: actionActions } = useEditorActionState();
   const nodeDefinitions = useNodeDefinitionList();
 
-  const node = editorState.nodes[nodeId];
+  const node = useNodeEditorSelector<NodeTreeNode | null>(
+    (state) => {
+      const node = state.nodes[nodeId];
+      if (!node) {
+        return null;
+      }
+      return {
+        id: node.id,
+        type: node.type,
+        parentId: node.parentId,
+        order: node.order,
+        locked: node.locked,
+        visible: node.visible,
+        expanded: node.expanded,
+        data: node.data,
+      };
+    },
+    { areEqual: areNodeTreeNodesEqual },
+  );
+
   if (!node) {
     return null;
   }
 
   const isSelected = actionState.editingSelectedNodeIds.includes(nodeId);
-  const childNodes = React.useMemo(() => {
-    const list = Object.values(editorState.nodes).filter((n) => n.parentId === nodeId);
-    return list.sort((a, b) => {
-      const ao = typeof a.order === "number" ? a.order : Number.POSITIVE_INFINITY;
-      const bo = typeof b.order === "number" ? b.order : Number.POSITIVE_INFINITY;
-      if (ao !== bo) {
-        return ao - bo;
-      }
-      // fallback: stable by title
-      const ta = a.data?.title || "";
-      const tb = b.data?.title || "";
-      return ta.localeCompare(tb);
-    });
-  }, [editorState.nodes, nodeId]);
+
+  const childNodeIds = useNodeEditorSelector<readonly NodeId[]>(
+    (state) => getSortedChildNodeIds(state.nodes, nodeId),
+    { areEqual: areNodeIdArraysEqual },
+  );
 
   const handleSelect = React.useEffectEvent((targetNodeId: NodeId, multiSelect: boolean) => {
     if (multiSelect) {
@@ -51,21 +82,21 @@ export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
   });
 
   const handleToggleVisibility = React.useEffectEvent((nodeId: NodeId) => {
-    const node = editorState.nodes[nodeId];
+    const node = getState().nodes[nodeId];
     if (node) {
       actions.updateNode(nodeId, { visible: node.visible === false });
     }
   });
 
   const handleToggleLock = React.useEffectEvent((nodeId: NodeId) => {
-    const node = editorState.nodes[nodeId];
+    const node = getState().nodes[nodeId];
     if (node) {
       actions.updateNode(nodeId, { locked: !node.locked });
     }
   });
 
   const handleToggleExpand = React.useEffectEvent((nodeId: NodeId) => {
-    const n = editorState.nodes[nodeId];
+    const n = getState().nodes[nodeId];
     if (!n) {
       return;
     }
@@ -80,7 +111,11 @@ export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
   });
 
   const handleUpdateTitle = React.useEffectEvent((nodeId: NodeId, title: string) => {
-    actions.updateNode(nodeId, { data: { ...editorState.nodes[nodeId]?.data, title } });
+    const current = getState().nodes[nodeId];
+    if (!current) {
+      return;
+    }
+    actions.updateNode(nodeId, { data: { ...current.data, title } });
   });
 
   return (
@@ -94,8 +129,11 @@ export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
       onToggleExpand={handleToggleExpand}
       onDeleteNode={handleDeleteNode}
       onUpdateTitle={handleUpdateTitle}
-      childNodes={childNodes}
+      childNodeIds={childNodeIds}
       onNodeDrop={onNodeDrop}
     />
   );
 };
+
+export const ConnectedNodeTreeItem = React.memo(ConnectedNodeTreeItemComponent);
+ConnectedNodeTreeItem.displayName = "ConnectedNodeTreeItem";

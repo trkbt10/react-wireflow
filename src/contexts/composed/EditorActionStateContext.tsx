@@ -11,7 +11,7 @@ import {
   type BoundActionCreators,
 } from "../../utils/typedActions";
 import { NodeId, ConnectionId, Position, Port as BasePort, ContextMenuState } from "../../types/core";
-import { useNodeEditor, useNodeEditorActions } from "./node-editor/context";
+import { useNodeEditorApi } from "./node-editor/context";
 import { useNodeDefinitionList } from "../node-definitions/hooks/useNodeDefinitionList";
 import { canAddNodeType, countNodesByType } from "../node-definitions/utils/nodeTypeLimits";
 import {
@@ -370,8 +370,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
   const boundActions = React.useMemo(() => bindActionCreators(editorActionStateActions, dispatch), [dispatch]);
 
   // Access other contexts for node operations
-  const { state: editorState } = useNodeEditor();
-  const editorActions = useNodeEditorActions();
+  const { actions: editorActions, getState } = useNodeEditorApi();
   const nodeDefinitions = useNodeDefinitionList();
   const canvasUtils = useNodeCanvasUtils();
 
@@ -382,6 +381,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       if (nodeIds.length === 0) {
         return;
       }
+      const editorState = getState();
       // Check if all nodes can be duplicated
       const counts = countNodesByType(editorState);
       const canDuplicateAll = nodeIds.every((nodeId) => {
@@ -396,7 +396,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       }
       editorActions.duplicateNodes(nodeIds);
     },
-    [state.selectedNodeIds, editorActions, editorState, nodeDefinitions],
+    [getState, state.selectedNodeIds, editorActions, nodeDefinitions],
   );
 
   const deleteNodes = React.useCallback(
@@ -417,9 +417,10 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       if (nodeIds.length === 0) {
         return;
       }
+      const editorState = getState();
       copyNodesToClipboard(nodeIds, editorState);
     },
-    [state.selectedNodeIds, editorState],
+    [getState, state.selectedNodeIds],
   );
 
   const cutNodes = React.useCallback(
@@ -428,11 +429,12 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       if (nodeIds.length === 0) {
         return;
       }
+      const editorState = getState();
       copyNodesToClipboard(nodeIds, editorState);
       nodeIds.forEach((nodeId) => editorActions.deleteNode(nodeId));
       boundActions.clearSelection();
     },
-    [state.selectedNodeIds, editorActions, editorState, boundActions],
+    [getState, state.selectedNodeIds, editorActions, boundActions],
   );
 
   const pasteNodes = React.useCallback(() => {
@@ -456,6 +458,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
 
   const createNodeFromContextMenu = React.useCallback(
     (nodeType: string, screenPosition: Position) => {
+      const editorState = getState();
       const nodeDefinition = nodeDefinitions.find((def) => def.type === nodeType);
       if (!nodeDefinition) {
         console.warn(`Node definition not found for type: ${nodeType}`);
@@ -515,19 +518,19 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       boundActions.hideContextMenu();
     },
     [
+      getState,
       nodeDefinitions,
       editorActions,
       boundActions,
       state.contextMenu.canvasPosition,
       state.contextMenu.fromPort,
-      editorState.connections,
-      editorState.nodes,
       canvasUtils,
     ],
   );
 
   const createNodeFromCanvasDrop = React.useCallback(
     (nodeType: string, canvasPosition: Position) => {
+      const editorState = getState();
       const nodeDefinition = nodeDefinitions.find((def) => def.type === nodeType);
       if (!nodeDefinition) {
         console.warn(`Node definition not found for type: ${nodeType}`);
@@ -542,7 +545,7 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       const newNode = buildNodeFromDefinition({ nodeDefinition, canvasPosition });
       editorActions.addNodeWithId(newNode);
     },
-    [nodeDefinitions, editorActions, editorState],
+    [getState, nodeDefinitions, editorActions],
   );
 
   const nodeOperations = React.useMemo<NodeOperations>(
