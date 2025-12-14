@@ -1,0 +1,219 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--node-editor-canvas-background);
+  color: var(--node-editor-text-color);
+  font-family: var(--node-editor-theme-default-font-family);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--node-editor-space-lg);
+  padding: var(--node-editor-space-md) var(--node-editor-space-lg);
+  background: var(--node-editor-table-header-background-color);
+  border-bottom: var(--node-editor-input-border);
+  flex-shrink: 0;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--node-editor-space-sm);
+}
+
+.label {
+  font-size: var(--node-editor-inspector-font-size-body);
+  font-weight: var(--node-editor-inspector-font-weight-medium);
+  color: var(--node-editor-secondary-label-color);
+}
+
+.select {
+  padding: var(--node-editor-space-xs) var(--node-editor-space-sm);
+  border: var(--node-editor-input-border);
+  border-radius: var(--node-editor-control-border-radius);
+  background: var(--node-editor-control-background);
+  color: var(--node-editor-text-color);
+  font-size: var(--node-editor-inspector-font-size-body);
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--node-editor-accent-color);
+}
+
+.button {
+  padding: var(--node-editor-space-xs) var(--node-editor-space-md);
+  border: none;
+  border-radius: var(--node-editor-control-border-radius);
+  background: var(--node-editor-accent-color);
+  color: var(--node-editor-accent-text-color);
+  font-size: var(--node-editor-inspector-font-size-body);
+  font-weight: var(--node-editor-inspector-font-weight-medium);
+  cursor: pointer;
+  transition: filter var(--node-editor-transition-duration) ease;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+.buttonSecondary {
+  padding: var(--node-editor-space-xs) var(--node-editor-space-md);
+  border: var(--node-editor-input-border);
+  border-radius: var(--node-editor-control-border-radius);
+  background: var(--node-editor-control-background);
+  color: var(--node-editor-text-color);
+  font-size: var(--node-editor-inspector-font-size-body);
+  cursor: pointer;
+  transition: background var(--node-editor-transition-duration) ease;
+}
+
+.buttonSecondary:hover {
+  background: var(--node-editor-control-hover-background);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+  background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      var(--node-editor-grid-line-color, rgba(128, 128, 128, 0.1)) 19px,
+      var(--node-editor-grid-line-color, rgba(128, 128, 128, 0.1)) 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      var(--node-editor-grid-line-color, rgba(128, 128, 128, 0.1)) 19px,
+      var(--node-editor-grid-line-color, rgba(128, 128, 128, 0.1)) 20px
+    );
+}
+
+.canvasHint {
+  padding: var(--node-editor-space-lg) var(--node-editor-space-xl);
+  background: var(--node-editor-control-background);
+  border: var(--node-editor-input-border);
+  border-radius: var(--node-editor-card-border-radius);
+  color: var(--node-editor-secondary-label-color);
+  font-size: var(--node-editor-inspector-font-size-body);
+  pointer-events: none;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.hint {
+  font-size: var(--node-editor-inspector-font-size-meta);
+  color: var(--node-editor-tertiary-label-color);
+}
+
+.sidebar {
+  width: 320px;
+  border-left: var(--node-editor-input-border);
+  background: var(--node-editor-control-background);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebarTitle {
+  margin: 0;
+  padding: var(--node-editor-space-md) var(--node-editor-space-lg);
+  font-size: var(--node-editor-inspector-font-size-body);
+  font-weight: var(--node-editor-inspector-font-weight-bold);
+  color: var(--node-editor-text-color);
+  border-bottom: var(--node-editor-input-border);
+  background: var(--node-editor-table-header-background-color);
+}
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--node-editor-space-sm);
+}
+
+.emptyLog {
+  padding: var(--node-editor-space-lg);
+  text-align: center;
+  color: var(--node-editor-tertiary-label-color);
+  font-size: var(--node-editor-inspector-font-size-meta);
+}
+
+.logEntry {
+  display: flex;
+  align-items: center;
+  gap: var(--node-editor-space-sm);
+  padding: var(--node-editor-space-xs) var(--node-editor-space-sm);
+  border-radius: var(--node-editor-control-border-radius);
+  font-size: var(--node-editor-inspector-font-size-body);
+}
+
+.logEntry:hover {
+  background: var(--node-editor-control-hover-background);
+}
+
+.logIndex {
+  color: var(--node-editor-tertiary-label-color);
+  font-size: var(--node-editor-inspector-font-size-meta);
+  min-width: 24px;
+}
+
+.logType {
+  font-family: var(--node-editor-font-mono);
+  color: var(--node-editor-accent-color);
+}
+
+.info {
+  padding: var(--node-editor-space-md) var(--node-editor-space-lg);
+  border-top: var(--node-editor-input-border);
+  background: var(--node-editor-table-header-background-color);
+  max-height: 50%;
+  overflow-y: auto;
+}
+
+.infoTitle {
+  margin: 0 0 var(--node-editor-space-xs) 0;
+  font-size: var(--node-editor-inspector-font-size-meta);
+  font-weight: var(--node-editor-inspector-font-weight-medium);
+  color: var(--node-editor-secondary-label-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.infoText {
+  margin: 0 0 var(--node-editor-space-sm) 0;
+  font-size: var(--node-editor-inspector-font-size-meta);
+  color: var(--node-editor-secondary-label-color);
+  line-height: 1.4;
+}
+
+.infoList {
+  margin: 0;
+  padding-left: var(--node-editor-space-lg);
+  font-size: var(--node-editor-inspector-font-size-meta);
+  color: var(--node-editor-tertiary-label-color);
+  line-height: 1.8;
+}
+
+.infoList li {
+  margin-bottom: var(--node-editor-space-xs);
+}
+
+.infoList strong {
+  color: var(--node-editor-secondary-label-color);
+}

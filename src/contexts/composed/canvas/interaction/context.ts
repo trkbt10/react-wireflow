@@ -3,6 +3,7 @@
  */
 import * as React from "react";
 import { createAction, type ActionUnion, type BoundActionCreators } from "../../../../utils/typedActions";
+import { useExternalStoreSelector } from "../../../../hooks/useExternalStoreSelector";
 import type {
   NodeId,
   ConnectionId,
@@ -210,20 +211,7 @@ export function useCanvasInteractionSelector<T>(
   options?: { areEqual?: (a: T, b: T) => boolean },
 ): T {
   const { subscribe, getState } = useCanvasInteractionActions();
-  const previousRef = React.useRef<T | null>(null);
-
-  const getSnapshot = React.useCallback((): T => {
-    const next = selector(getState());
-    const previous = previousRef.current;
-    const areEqual = options?.areEqual;
-    if (previous !== null && areEqual && areEqual(previous, next)) {
-      return previous;
-    }
-    previousRef.current = next;
-    return next;
-  }, [getState, selector, options?.areEqual]);
-
-  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useExternalStoreSelector(subscribe, getState, selector, options);
 }
 
 /**

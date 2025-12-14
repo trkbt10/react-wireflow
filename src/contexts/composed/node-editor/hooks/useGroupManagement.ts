@@ -2,7 +2,7 @@
  * @file Hook for managing group node relationships and operations
  */
 import * as React from "react";
-import { useNodeEditor } from "../context";
+import { useNodeEditorApi } from "../context";
 import { useEditorActionState } from "../../EditorActionStateContext";
 import { useCanvasInteractionDragState } from "../../canvas/interaction/context";
 import { useNodeDefinitionList } from "../../../node-definitions/hooks/useNodeDefinitionList";
@@ -42,7 +42,7 @@ export type UseGroupManagementResult = {
  * Hook for managing group relationships and operations
  */
 export const useGroupManagement = (options: UseGroupManagementOptions = {}): UseGroupManagementResult => {
-  const { state, actions } = useNodeEditor();
+  const { actions, getState, subscribeToChanges } = useNodeEditorApi();
   const { state: _actionState } = useEditorActionState();
   const dragState = useCanvasInteractionDragState();
   const nodeDefinitions = useNodeDefinitionList();
@@ -50,8 +50,7 @@ export const useGroupManagement = (options: UseGroupManagementOptions = {}): Use
 
   // Debounced membership update
   const updateMembershipTimeoutRef = React.useRef<number | undefined>(undefined);
-  const nodesRef = React.useRef(state.nodes);
-  nodesRef.current = state.nodes;
+  const nodesRef = React.useRef(getState().nodes);
   const nodeDefinitionsRef = React.useRef(nodeDefinitions);
   nodeDefinitionsRef.current = nodeDefinitions;
 
@@ -68,28 +67,37 @@ export const useGroupManagement = (options: UseGroupManagementOptions = {}): Use
       return;
     }
 
-    // Clear existing timeout
-    if (updateMembershipTimeoutRef.current) {
-      clearTimeout(updateMembershipTimeoutRef.current);
-    }
+    const clearPending = () => {
+      if (updateMembershipTimeoutRef.current) {
+        clearTimeout(updateMembershipTimeoutRef.current);
+        updateMembershipTimeoutRef.current = undefined;
+      }
+    };
 
-    // Only update if we're not currently dragging nodes
-    // This prevents continuous updates during drag operations
-    const isDragging = dragState !== null;
-
-    if (!isDragging) {
-      // Set new timeout for debounced update
+    const scheduleUpdate = () => {
+      clearPending();
+      const isDragging = dragState !== null;
+      if (isDragging) {
+        return;
+      }
       updateMembershipTimeoutRef.current = window.setTimeout(() => {
         updateAllGroupMembership();
       }, membershipUpdateDelay);
-    }
+    };
+
+    // Keep nodesRef up to date and schedule updates only for geometry-affecting changes.
+    const unsubscribe = subscribeToChanges((change) => {
+      nodesRef.current = getState().nodes;
+      if (change.affectsGeometry || change.fullResync) {
+        scheduleUpdate();
+      }
+    });
 
     return () => {
-      if (updateMembershipTimeoutRef.current) {
-        clearTimeout(updateMembershipTimeoutRef.current);
-      }
+      clearPending();
+      unsubscribe();
     };
-  }, [autoUpdateMembership, dragState, membershipUpdateDelay, state.nodes, nodeDefinitions, updateAllGroupMembership]);
+  }, [autoUpdateMembership, dragState, getState, membershipUpdateDelay, subscribeToChanges, updateAllGroupMembership]);
 
   const isNodeInGroup = React.useCallback(
     (nodeId: NodeId): boolean => {
@@ -114,7 +122,9 @@ export const useGroupManagement = (options: UseGroupManagementOptions = {}): Use
 
   const moveGroupWithChildren = React.useCallback(
     (groupId: NodeId, delta: { x: number; y: number }) => {
-      actions.moveGroupWithChildren(groupId, delta);
+      const children = getGroupChildren(groupId, nodesRef.current);
+      const affectedNodeIds = [groupId, ...children.map((child) => child.id)];
+      actions.moveGroupWithChildren(groupId, delta, affectedNodeIds);
     },
     [actions],
   );

@@ -19,9 +19,8 @@ import { computeAllPortPositions, computeNodePortPositions } from "../../core/po
 import { PortPositionContext } from "./context";
 import type { PortPositionContextValue } from "./context";
 import { PortPositionSettingsContext, type PortPositionSettingsValue } from "./context";
-import { useNodeEditor } from "../composed/node-editor/context";
+import { useNodeEditorApi } from "../composed/node-editor/context";
 import { useNodeDefinitions } from "../node-definitions/context";
-import { hasNodeGeometryChanged } from "../../core/node/comparators";
 
 /**
  * Provider component for port positions
@@ -113,7 +112,7 @@ const StatefulPortPositionProvider: React.FC<{
   config: PortPositionConfig;
   children: React.ReactNode;
 }> = ({ behavior, config, children }) => {
-  const { state: editorState, getNodePorts } = useNodeEditor();
+  const { getState, getNodePorts, subscribeToChanges } = useNodeEditorApi();
   const { registry } = useNodeDefinitions();
 
   const computePositionsForNodes = React.useCallback(
@@ -154,65 +153,75 @@ const StatefulPortPositionProvider: React.FC<{
     [behavior, config],
   );
 
-  // Compute port positions whenever nodes change
-  const [portPositions, setPortPositions] = React.useState<EditorPortPositions>(() => new Map());
-
-  // Track previous state for change detection
-  const prevNodesRef = React.useRef<typeof editorState.nodes>(editorState.nodes);
-  const prevBehaviorRef = React.useRef<PortPositionBehavior | undefined>(behavior);
-  const prevConfigRef = React.useRef<PortPositionConfig>(config);
-  const prevPortPositionsRef = React.useRef<EditorPortPositions>(portPositions);
-
-  React.useEffect(() => {
-    if (!editorState.nodes) {
-      return;
-    }
-
-    const prevNodes = prevNodesRef.current;
-    let shouldRecompute = false;
-
-    if (!prevNodes || Object.keys(prevNodes).length !== Object.keys(editorState.nodes).length) {
-      shouldRecompute = true;
-    } else {
-      for (const nodeId in editorState.nodes) {
-        const node = editorState.nodes[nodeId];
-        const prevNode = prevNodes[nodeId];
-
-        if (!prevNode || hasNodeGeometryChanged(prevNode, node)) {
-          shouldRecompute = true;
-          break;
-        }
-      }
-    }
-
-    if (!shouldRecompute) {
-      if (prevBehaviorRef.current !== behavior) {
-        shouldRecompute = true;
-      } else if (prevConfigRef.current !== config) {
-        shouldRecompute = true;
-      }
-    }
-
-    if (shouldRecompute) {
-      const nodes = Object.values(editorState.nodes).map((node) => {
-        // Skip port resolution for unknown node types
+  const computeAllPositions = React.useCallback(
+    (previousPositions: EditorPortPositions): EditorPortPositions => {
+      const { nodes } = getState();
+      const portNodes = Object.values(nodes).map((node) => {
         const definition = registry.get(node.type);
         const ports: CorePort[] = definition ? getNodePorts(node.id) : [];
         return { ...node, ports };
       }) as PortPositionNode[];
+      return computePositionsForNodes(portNodes, previousPositions);
+    },
+    [computePositionsForNodes, getNodePorts, getState, registry],
+  );
 
-      const newPortPositions = computePositionsForNodes(nodes, prevPortPositionsRef.current);
-      setPortPositions(newPortPositions);
-      prevPortPositionsRef.current = newPortPositions;
+  // Compute initial port positions once.
+  const [portPositions, setPortPositions] = React.useState<EditorPortPositions>(() => computeAllPositions(new Map()));
+  const prevPortPositionsRef = React.useRef<EditorPortPositions>(portPositions);
 
-      prevNodesRef.current = editorState.nodes;
-      prevBehaviorRef.current = behavior;
-      prevConfigRef.current = config;
-    } else {
-      prevBehaviorRef.current = behavior;
-      prevConfigRef.current = config;
-    }
-  }, [editorState.nodes, behavior, config, getNodePorts, computePositionsForNodes, registry]);
+  React.useEffect(() => {
+    // Config/behavior changes require a full recompute.
+    const next = computeAllPositions(prevPortPositionsRef.current);
+    prevPortPositionsRef.current = next;
+    setPortPositions(next);
+  }, [behavior, config, computeAllPositions]);
+
+  React.useEffect(() => {
+    return subscribeToChanges((change) => {
+      if (!change.affectsGeometry && !change.affectsPorts && change.removedNodeIds.length === 0) {
+        return;
+      }
+
+      if (change.fullResync || behavior?.computeAll) {
+        const next = computeAllPositions(prevPortPositionsRef.current);
+        prevPortPositionsRef.current = next;
+        setPortPositions(next);
+        return;
+      }
+
+      const current = getState();
+      const updated = new Map(prevPortPositionsRef.current);
+
+      change.removedNodeIds.forEach((nodeId) => {
+        updated.delete(nodeId);
+      });
+
+      const nodesToRecompute = change.changedNodeIds
+        .filter((nodeId) => Boolean(current.nodes[nodeId]))
+        .map((nodeId) => {
+          const node = current.nodes[nodeId]!;
+          const definition = registry.get(node.type);
+          const ports: CorePort[] = definition ? getNodePorts(node.id) : [];
+          return { ...node, ports };
+        }) as PortPositionNode[];
+
+      // Ensure stale entries are removed before applying new values.
+      change.changedNodeIds.forEach((nodeId) => {
+        updated.delete(nodeId);
+      });
+
+      if (nodesToRecompute.length > 0) {
+        const recomputed = computePositionsForNodes(nodesToRecompute, prevPortPositionsRef.current);
+        for (const [nodeId, positions] of recomputed.entries()) {
+          updated.set(nodeId, positions);
+        }
+      }
+
+      prevPortPositionsRef.current = updated;
+      setPortPositions(updated);
+    });
+  }, [behavior?.computeAll, computeAllPositions, computePositionsForNodes, getNodePorts, getState, registry, subscribeToChanges]);
 
   return (
     <StatelessPortPositionProvider portPositions={portPositions} behavior={behavior} config={config}>

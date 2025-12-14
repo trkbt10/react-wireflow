@@ -2,7 +2,7 @@
  * @file Minimap component
  */
 import * as React from "react";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
 import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitionList } from "../../contexts/node-definitions/hooks/useNodeDefinitionList";
 import { useResizeObserver } from "../../hooks/useResizeObserver";
@@ -16,6 +16,7 @@ import {
 } from "../layout/FloatingPanelFrame";
 import styles from "./Minimap.module.css";
 import { NodeMapRenderer } from "./NodeMapRenderer";
+import type { Node, NodeId } from "../../types/core";
 
 export type MinimapProps = {
   /** Scale factor for minimap rendering */
@@ -29,8 +30,30 @@ export type MinimapProps = {
 const HEADER_HEIGHT = 30;
 const CANVAS_PADDING = { top: 10, right: 10, bottom: 10, left: 10 };
 
+type MinimapNode = Pick<Node, "id" | "type" | "position" | "size" | "visible" | "data">;
+
+const pickMinimapNodes = (nodes: Record<NodeId, Node>): Record<NodeId, MinimapNode> => {
+  const picked: Record<NodeId, MinimapNode> = {};
+  for (const id in nodes) {
+    const node = nodes[id];
+    picked[id] = {
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      size: node.size,
+      visible: node.visible,
+      data: {},
+    };
+  }
+  return picked;
+};
+
 export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, height = 150 }) => {
-  const { state } = useNodeEditor();
+  const { getState: getNodeEditorState, subscribeToChanges } = useNodeEditorApi();
+  const connections = useNodeEditorSelector((state) => state.connections);
+  const [nodesForMinimap, setNodesForMinimap] = React.useState<Record<NodeId, MinimapNode>>(() => {
+    return pickMinimapNodes(getNodeEditorState().nodes);
+  });
   const { state: canvasState, actions: canvasActions, canvasRef: editorCanvasRef } = useNodeCanvas();
   const nodeDefinitions = useNodeDefinitionList();
   const canvasRef = React.useRef<HTMLDivElement>(null);
@@ -66,9 +89,17 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
     });
   }, [canvasRect?.width, canvasRect?.height]);
 
+  React.useEffect(() => {
+    return subscribeToChanges((change) => {
+      if (change.affectsGeometry || change.affectsNodeOrder || change.fullResync) {
+        setNodesForMinimap(pickMinimapNodes(getNodeEditorState().nodes));
+      }
+    });
+  }, [getNodeEditorState, subscribeToChanges]);
+
   // Calculate bounds of all nodes
   const nodeBounds = React.useMemo(() => {
-    const nodes = Object.values(state.nodes).filter((n) => n.visible !== false);
+    const nodes = Object.values(nodesForMinimap).filter((n) => n.visible !== false);
     if (nodes.length === 0) {
       return { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
     }
@@ -98,7 +129,7 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
       maxX: maxX + padding,
       maxY: maxY + padding,
     };
-  }, [state.nodes]);
+  }, [nodesForMinimap]);
 
   const mapWidth = React.useMemo(() => {
     const measured = canvasSize.width;
@@ -312,7 +343,7 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
       <FloatingPanelHeader>
         <div className={styles.minimapHeaderInfo}>
           <FloatingPanelTitle>Minimap</FloatingPanelTitle>
-          <FloatingPanelMeta>{Object.keys(state.nodes).length} nodes</FloatingPanelMeta>
+          <FloatingPanelMeta>{Object.keys(nodesForMinimap).length} nodes</FloatingPanelMeta>
         </div>
         <FloatingPanelControls>
           <span className={styles.minimapZoom}>{Math.round(canvasState.viewport.scale * 100)}%</span>
@@ -328,8 +359,8 @@ export const Minimap: React.FC<MinimapProps> = ({ scale = 0.1, width = 200, heig
         data-is-dragging={isDragging}
       >
         <NodeMapRenderer
-          nodes={state.nodes}
-          connections={state.connections}
+          nodes={nodesForMinimap}
+          connections={connections}
           width={mapWidth}
           height={mapHeight}
           padding={CANVAS_PADDING}

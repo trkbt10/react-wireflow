@@ -10,8 +10,14 @@ import styles from "./CategoryListView.module.css";
 
 export type CategoryListViewProps = {
   categories: NodeDefinitionCategory[];
-  selectedCategory: string | null;
-  onCategoryClick: (categoryName: string | null) => void;
+  /** Selected categories (empty set means all categories shown) */
+  selectedCategories: Set<string>;
+  /**
+   * Called when a category is clicked.
+   * @param categoryName - The clicked category name
+   * @param multiSelect - Whether this is a multi-select action (Cmd/Ctrl+click)
+   */
+  onCategoryClick: (categoryName: string, multiSelect: boolean) => void;
   selectedIndex: number;
   onNodeSelect: (nodeType: string) => void;
   onNodeHover: (index: number) => void;
@@ -23,7 +29,7 @@ export type CategoryListViewProps = {
 
 export const CategoryListView: React.FC<CategoryListViewProps> = ({
   categories,
-  selectedCategory,
+  selectedCategories,
   onCategoryClick,
   selectedIndex,
   onNodeSelect,
@@ -33,10 +39,11 @@ export const CategoryListView: React.FC<CategoryListViewProps> = ({
   matchingNodeTypes,
 }) => {
   const handleCategoryHeaderClick = React.useCallback(
-    (categoryName: string) => {
-      onCategoryClick(selectedCategory === categoryName ? null : categoryName);
+    (e: React.MouseEvent, categoryName: string) => {
+      const isMultiSelect = e.metaKey || e.ctrlKey;
+      onCategoryClick(categoryName, isMultiSelect);
     },
-    [selectedCategory, onCategoryClick],
+    [onCategoryClick],
   );
 
   const handleNodeClick = React.useCallback(
@@ -54,8 +61,8 @@ export const CategoryListView: React.FC<CategoryListViewProps> = ({
         <div key={category.name} className={styles.categoryGroup}>
           <div
             className={styles.categoryHeader}
-            onClick={() => handleCategoryHeaderClick(category.name)}
-            data-is-selected={selectedCategory === category.name}
+            onClick={(e) => handleCategoryHeaderClick(e, category.name)}
+            data-is-selected={selectedCategories.has(category.name)}
           >
             {category.icon != null && <CategoryIcon icon={category.icon} />}
             <span className={styles.categoryName}>{category.name}</span>

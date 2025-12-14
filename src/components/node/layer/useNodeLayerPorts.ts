@@ -6,7 +6,7 @@ import { useEditorActionStateActions } from "../../../contexts/composed/EditorAc
 import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasActions, useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import { useNodeEditorApi } from "../../../contexts/composed/node-editor/context";
 import { usePortPositions } from "../../../contexts/node-ports/context";
 import {
   computeConnectablePortIds,
@@ -23,7 +23,7 @@ import { useLatestRef } from "../../../hooks/useLatestRef";
 export const useNodeLayerPorts = () => {
   const { actions: actionActions } = useEditorActionStateActions();
   const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
-  const { getState: getNodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
+  const { getState: getNodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditorApi();
   const { containerRef } = useNodeCanvasActions();
   const utils = useNodeCanvasUtils();
   const { calculateNodePortPositions } = usePortPositions();

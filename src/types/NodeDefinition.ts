@@ -362,8 +362,14 @@ export type NodeDefinition<TData extends Record<string, unknown> = Record<string
   description?: string;
   /** Icon or visual identifier */
   icon?: ReactNode;
-  /** Category for grouping in UI */
-  category?: string;
+  /**
+   * Category for grouping in UI.
+   * Can be a single category string or an array of categories for multi-category membership.
+   * Supports hierarchical paths using "/" separator (e.g., "custom/ui").
+   * When multiple categories share a common ancestor, the node appears once per specific category
+   * and only once in shared parent categories.
+   */
+  category?: string | string[];
   /**
    * Reference to shared category metadata (icon, priority, etc.).
    * When provided, takes precedence over individual priority field for category ordering.

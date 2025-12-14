@@ -192,23 +192,18 @@ const nodeEditorHandlers = createActionHandlerMap<NodeEditorData, typeof nodeEdi
       return { ...state, nodes: updatedNodes };
     },
     moveGroupWithChildren: (state, action) => {
-      const { groupId, delta } = action.payload;
+      const { groupId: _groupId, delta, affectedNodeIds } = action.payload;
       const updatedNodes = { ...state.nodes };
-      const groupNode = updatedNodes[groupId];
-      if (groupNode) {
-        updatedNodes[groupId] = {
-          ...groupNode,
-          position: { x: groupNode.position.x + delta.x, y: groupNode.position.y + delta.y },
+      affectedNodeIds.forEach((nodeId) => {
+        const node = updatedNodes[nodeId];
+        if (!node) {
+          return;
+        }
+        updatedNodes[nodeId] = {
+          ...node,
+          position: { x: node.position.x + delta.x, y: node.position.y + delta.y },
         };
-        Object.values(updatedNodes).forEach((candidate) => {
-          if (candidate.parentId === groupId) {
-            updatedNodes[candidate.id] = {
-              ...candidate,
-              position: { x: candidate.position.x + delta.x, y: candidate.position.y + delta.y },
-            };
-          }
-        });
-      }
+      });
       return { ...state, nodes: updatedNodes };
     },
     autoLayout: (state) => state,

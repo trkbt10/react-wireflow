@@ -30,7 +30,7 @@ export const nodeEditorActions = {
   ),
   moveGroupWithChildren: createAction(
     "MOVE_GROUP_WITH_CHILDREN",
-    (groupId: NodeId, delta: { x: number; y: number }) => ({ groupId, delta }),
+    (groupId: NodeId, delta: { x: number; y: number }, affectedNodeIds: NodeId[]) => ({ groupId, delta, affectedNodeIds }),
   ),
   autoLayout: createAction(
     "AUTO_LAYOUT",

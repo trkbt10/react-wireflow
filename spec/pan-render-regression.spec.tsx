@@ -8,7 +8,7 @@ import { CanvasBase } from "../src/components/canvas/CanvasBase";
 import { NodeViewContainer } from "../src/components/node/NodeViewContainer";
 import { ConnectionRenderer } from "../src/components/connection/ConnectionRenderer";
 import { NodeTreeListPanel } from "../src/components/inspector/panels/NodeTreeListPanel";
-import { useNodeEditor } from "../src/contexts/composed/node-editor/context";
+import { useNodeEditor, useNodeEditorSelector, useNodeEditorSortedNodeIds } from "../src/contexts/composed/node-editor/context";
 import { useNodeSelectionInteractions } from "../src/components/node/hooks/useNodeSelectionInteractions";
 import { CanvasPointerActionProvider } from "../src/contexts/composed/canvas/pointer-action-provider";
 
@@ -42,28 +42,50 @@ type CommitCounters = {
 
 const createCommitCounters = (): CommitCounters => ({ nodes: 0, connections: 0, inspector: 0 });
 
+const TestNodeItem: React.FC<{
+  nodeId: string;
+  counters: CommitCounters;
+  onPointerDown: (event: React.PointerEvent, nodeId: string, isDragAllowed?: boolean) => void;
+  onContextMenu: (event: React.MouseEvent, nodeId: string) => void;
+}> = ({ nodeId, counters, onPointerDown, onContextMenu }) => {
+  const node = useNodeEditorSelector((state) => state.nodes[nodeId], { areEqual: (a, b) => a === b });
+  if (!node) {
+    return null;
+  }
+
+  return (
+    <React.Profiler
+      key={node.id}
+      id={`node-${node.id}`}
+      onRender={() => {
+        counters.nodes++;
+      }}
+    >
+      <NodeViewContainer
+        node={node}
+        isSelected={false}
+        isDragging={false}
+        onPointerDown={onPointerDown}
+        onContextMenu={onContextMenu}
+      />
+    </React.Profiler>
+  );
+};
+
 const TestNodeLayer: React.FC<{ counters: CommitCounters }> = ({ counters }) => {
-  const { sortedNodes } = useNodeEditor();
+  const nodeIds = useNodeEditorSortedNodeIds();
   const { handleNodePointerDown, handleNodeContextMenu } = useNodeSelectionInteractions();
 
   return (
     <div>
-      {sortedNodes.map((node) => (
-        <React.Profiler
-          key={node.id}
-          id={`node-${node.id}`}
-          onRender={() => {
-            counters.nodes++;
-          }}
-        >
-          <NodeViewContainer
-            node={node}
-            isSelected={false}
-            isDragging={false}
-            onPointerDown={handleNodePointerDown}
-            onContextMenu={handleNodeContextMenu}
-          />
-        </React.Profiler>
+      {nodeIds.map((nodeId) => (
+        <TestNodeItem
+          key={nodeId}
+          nodeId={nodeId}
+          counters={counters}
+          onPointerDown={handleNodePointerDown}
+          onContextMenu={handleNodeContextMenu}
+        />
       ))}
     </div>
   );

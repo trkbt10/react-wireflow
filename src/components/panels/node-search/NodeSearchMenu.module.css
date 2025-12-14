@@ -3,13 +3,12 @@
 /* ========================================= */
 
 .nodeSearchMenu {
-  --_menu-min-width-default: 360px;
-  --_menu-max-width: 480px;
-  --_menu-max-height: 480px;
+  --_menu-width: var(--_menu-width-override, 360px);
+  --_menu-height: 420px;
 
-  min-width: var(--_menu-min-width, var(--_menu-min-width-default));
-  max-width: var(--_menu-max-width);
-  max-height: var(--_menu-max-height);
+  /* Use fixed dimensions to prevent size changes during render */
+  width: var(--_menu-width);
+  height: var(--_menu-height);
   background: var(--node-editor-control-background);
   border: var(--node-editor-input-border);
   border-radius: var(--node-editor-card-border-radius);
@@ -22,9 +21,8 @@
 
 /* Split view mode - wider layout */
 .nodeSearchMenu[data-view-mode="split"] {
-  --_menu-min-width-default: 540px;
-  --_menu-max-width: 680px;
-  --_menu-max-height: 520px;
+  --_menu-width: var(--_menu-width-override, 560px);
+  --_menu-height: 480px;
 }
 
 /* Container for view components - delegates scroll behavior to children */

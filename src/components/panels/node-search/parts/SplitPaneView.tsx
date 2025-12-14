@@ -18,8 +18,14 @@ export type SplitPaneViewProps = {
   categories: NestedNodeDefinitionCategory[];
   /** Flat grouped categories to display when "All Nodes" is selected */
   groupedCategories: NodeDefinitionCategory[];
-  selectedCategoryPath: string | null;
-  onCategorySelect: (categoryPath: string | null) => void;
+  /** Selected category paths (empty set means "All Nodes") */
+  selectedCategoryPaths: Set<string>;
+  /**
+   * Called when a category is selected.
+   * @param categoryPath - The selected category path (null for "All")
+   * @param multiSelect - Whether this is a multi-select action (Cmd/Ctrl+click)
+   */
+  onCategorySelect: (categoryPath: string | null, multiSelect: boolean) => void;
   selectedNodeIndex: number;
   onNodeSelect: (nodeType: string) => void;
   onNodeHover: (index: number) => void;
@@ -62,7 +68,7 @@ const findCategoryByPath = (
 export const SplitPaneView: React.FC<SplitPaneViewProps> = ({
   categories,
   groupedCategories,
-  selectedCategoryPath,
+  selectedCategoryPaths,
   onCategorySelect,
   selectedNodeIndex,
   onNodeSelect,
@@ -88,10 +94,24 @@ export const SplitPaneView: React.FC<SplitPaneViewProps> = ({
     });
   }, []);
 
-  const selectedCategory = selectedCategoryPath ? findCategoryByPath(categories, selectedCategoryPath) : null;
+  // Find all selected categories
+  const selectedCategories = React.useMemo(() => {
+    if (selectedCategoryPaths.size === 0) {
+      return [];
+    }
+    const result: NestedNodeDefinitionCategory[] = [];
+    for (const path of selectedCategoryPaths) {
+      const category = findCategoryByPath(categories, path);
+      if (category) {
+        result.push(category);
+      }
+    }
+    return result;
+  }, [categories, selectedCategoryPaths]);
 
   const displayNodes = React.useMemo(() => {
-    if (!selectedCategory) {
+    if (selectedCategoryPaths.size === 0) {
+      // "All" selected - show all nodes
       const allNodes: NodeDefinition[] = [];
       const collectNodes = (cats: NestedNodeDefinitionCategory[]) => {
         cats.forEach((cat) => {
@@ -102,11 +122,31 @@ export const SplitPaneView: React.FC<SplitPaneViewProps> = ({
       collectNodes(categories);
       return allNodes.sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
-    return getAllNodesFromCategory(selectedCategory);
-  }, [categories, selectedCategory]);
+    // Collect nodes from all selected categories, deduplicating by type
+    const nodesByType = new Map<string, NodeDefinition>();
+    for (const category of selectedCategories) {
+      const categoryNodes = getAllNodesFromCategory(category);
+      for (const node of categoryNodes) {
+        if (!nodesByType.has(node.type)) {
+          nodesByType.set(node.type, node);
+        }
+      }
+    }
+    return Array.from(nodesByType.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [categories, selectedCategoryPaths, selectedCategories]);
 
-  const paneTitle = selectedCategory ? selectedCategory.name : t("nodeSearchAllNodes");
-  const showAllNodesGrouped = selectedCategoryPath === null;
+  // Generate pane title based on selection
+  const paneTitle = React.useMemo(() => {
+    if (selectedCategoryPaths.size === 0) {
+      return t("nodeSearchAllNodes");
+    }
+    if (selectedCategories.length === 1) {
+      return selectedCategories[0]!.name;
+    }
+    return `${selectedCategories.length} categories`;
+  }, [selectedCategoryPaths.size, selectedCategories, t]);
+
+  const showAllNodesGrouped = selectedCategoryPaths.size === 0;
 
   return (
     <div className={styles.splitPane}>
@@ -114,7 +154,7 @@ export const SplitPaneView: React.FC<SplitPaneViewProps> = ({
         <PaneHeader>{t("nodeSearchCategoriesHeader")}</PaneHeader>
         <CategoryTree
           categories={categories}
-          selectedPath={selectedCategoryPath}
+          selectedPaths={selectedCategoryPaths}
           onSelect={onCategorySelect}
           expandedPaths={expandedPaths}
           onToggle={handleToggle}

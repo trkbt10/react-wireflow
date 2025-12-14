@@ -36,6 +36,8 @@ export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = React.memo(
   const dialogRef = React.useRef<HTMLDialogElement>(null);
   const internalContentRef = React.useRef<HTMLDivElement>(null);
   const [computedPosition, setComputedPosition] = React.useState<Position>(anchor);
+  // Track whether position has been computed (to avoid showing menu at wrong position initially)
+  const [isPositionReady, setIsPositionReady] = React.useState(false);
   // Track current anchor to detect changes
   const anchorRef = React.useRef<Position>(anchor);
 
@@ -57,6 +59,7 @@ export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = React.memo(
     const viewport = getViewportInfo();
     const nextPosition = calculateContextMenuPosition(anchor.x, anchor.y, rect.width, rect.height, viewport);
     setComputedPosition(nextPosition);
+    setIsPositionReady(true);
     handlePositionChange(nextPosition);
   }, [anchor.x, anchor.y]);
 
@@ -78,11 +81,15 @@ export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = React.memo(
   // Reset position when anchor changes, then immediately recalculate
   React.useLayoutEffect(() => {
     if (!visible) {
+      // Reset ready state when menu is hidden
+      setIsPositionReady(false);
       return;
     }
     // Only reset if anchor actually changed
     if (anchorRef.current.x !== anchor.x || anchorRef.current.y !== anchor.y) {
       anchorRef.current = anchor;
+      // Reset ready state when anchor changes
+      setIsPositionReady(false);
     }
     // Always recalculate position after content renders
     updatePosition();
@@ -141,7 +148,9 @@ export const ContextMenuOverlay: React.FC<ContextMenuOverlayProps> = React.memo(
   const positionStyle = React.useMemo((): React.CSSProperties => ({
     left: computedPosition.x,
     top: computedPosition.y,
-  }), [computedPosition.x, computedPosition.y]);
+    // Hide content until position is computed to prevent flicker at wrong position
+    visibility: isPositionReady ? "visible" : "hidden",
+  }), [computedPosition.x, computedPosition.y, isPositionReady]);
 
   const dataProps = React.useMemo<DataAttributes>(() => {
     if (!dataAttributes) {

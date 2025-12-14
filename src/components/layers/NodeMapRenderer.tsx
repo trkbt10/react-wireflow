@@ -7,8 +7,10 @@ import type { NodeDefinition } from "../../types/NodeDefinition";
 import { nodeHasGroupBehavior } from "../../types/behaviors";
 import styles from "./NodeMapRenderer.module.css";
 
+type NodeMapNode = Pick<Node, "id" | "type" | "position" | "size" | "visible" | "data">;
+
 export type NodeMapRendererProps = {
-  nodes: Record<string, Node>;
+  nodes: Record<string, NodeMapNode>;
   connections: Record<string, Connection>;
   width: number;
   height: number;

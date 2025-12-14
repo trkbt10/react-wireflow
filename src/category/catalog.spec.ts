@@ -11,6 +11,8 @@ import {
   filterNestedNodeDefinitions,
   flattenNestedNodeDefinitions,
   parseCategoryPath,
+  normalizeCategories,
+  filterPrefixCategories,
 } from "./catalog";
 
 const baseNode = (overrides: Partial<NodeDefinition>): NodeDefinition => ({
@@ -191,5 +193,121 @@ describe("flattenNestedNodeDefinitions", () => {
     expect(flattened).toHaveLength(2);
     expect(flattened.map((f) => f.node.type)).toEqual(["source", "filter"]);
     expect(flattened[1]?.categoryPath).toBe("Data/Transform");
+  });
+});
+
+describe("normalizeCategories", () => {
+  it("returns default category for undefined", () => {
+    expect(normalizeCategories(undefined)).toEqual([DEFAULT_NODE_CATEGORY]);
+  });
+
+  it("wraps single string in array", () => {
+    expect(normalizeCategories("Data")).toEqual(["Data"]);
+  });
+
+  it("returns array as-is when not empty", () => {
+    expect(normalizeCategories(["Data", "UI"])).toEqual(["Data", "UI"]);
+  });
+
+  it("returns default category for empty array", () => {
+    expect(normalizeCategories([])).toEqual([DEFAULT_NODE_CATEGORY]);
+  });
+});
+
+describe("filterPrefixCategories", () => {
+  it("filters out parent categories when child categories exist", () => {
+    expect(filterPrefixCategories(["custom", "custom/ui"])).toEqual(["custom/ui"]);
+  });
+
+  it("keeps all categories when they are not prefixes of each other", () => {
+    expect(filterPrefixCategories(["custom/ui", "custom/hoge"])).toEqual(["custom/ui", "custom/hoge"]);
+  });
+
+  it("filters multiple levels of parents", () => {
+    expect(filterPrefixCategories(["a", "a/b", "a/b/c"])).toEqual(["a/b/c"]);
+  });
+
+  it("handles independent categories", () => {
+    expect(filterPrefixCategories(["custom", "data"])).toEqual(["custom", "data"]);
+  });
+
+  it("handles single category", () => {
+    expect(filterPrefixCategories(["custom"])).toEqual(["custom"]);
+  });
+});
+
+describe("groupNodeDefinitions with multi-category", () => {
+  it("places node in multiple categories", () => {
+    const grouped = groupNodeDefinitions([
+      baseNode({ type: "multi", displayName: "Multi Node", category: ["Data", "UI"] }),
+      baseNode({ type: "single", displayName: "Single Node", category: "Data" }),
+    ]);
+
+    const dataCategory = grouped.find((c) => c.name === "Data");
+    const uiCategory = grouped.find((c) => c.name === "UI");
+
+    expect(dataCategory?.nodes).toHaveLength(2);
+    expect(uiCategory?.nodes).toHaveLength(1);
+    expect(uiCategory?.nodes[0]?.type).toBe("multi");
+  });
+
+  it("filters out parent categories when child categories exist", () => {
+    const grouped = groupNodeDefinitions([
+      baseNode({ type: "nested", displayName: "Nested Node", category: ["custom", "custom/ui"] }),
+    ]);
+
+    // Should only appear in custom/ui, not in custom
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0]?.name).toBe("custom/ui");
+    expect(grouped[0]?.nodes).toHaveLength(1);
+  });
+
+  it("does not duplicate node within same category", () => {
+    const grouped = groupNodeDefinitions([
+      baseNode({ type: "dupe", displayName: "Dupe Node", category: ["Data", "Data"] }),
+    ]);
+
+    const dataCategory = grouped.find((c) => c.name === "Data");
+    expect(dataCategory?.nodes).toHaveLength(1);
+  });
+});
+
+describe("groupNodeDefinitionsNested with multi-category", () => {
+  it("places node in multiple hierarchical categories", () => {
+    const nested = groupNodeDefinitionsNested([
+      baseNode({ type: "multi", displayName: "Multi Node", category: ["Data/Transform", "UI/Controls"] }),
+    ]);
+
+    const dataCategory = nested.find((c) => c.name === "Data");
+    const uiCategory = nested.find((c) => c.name === "UI");
+
+    expect(dataCategory?.children[0]?.nodes).toHaveLength(1);
+    expect(uiCategory?.children[0]?.nodes).toHaveLength(1);
+  });
+
+  it("prevents duplicate in shared parent when multiple child categories specified", () => {
+    const nested = groupNodeDefinitionsNested([
+      baseNode({ type: "shared", displayName: "Shared Node", category: ["custom/ui", "custom/hoge"] }),
+    ]);
+
+    const customCategory = nested.find((c) => c.name === "custom");
+    // Node should appear in custom/ui and custom/hoge, but NOT directly in custom
+    expect(customCategory?.nodes).toHaveLength(0);
+    expect(customCategory?.children).toHaveLength(2);
+    expect(customCategory?.children.find((c) => c.name === "ui")?.nodes).toHaveLength(1);
+    expect(customCategory?.children.find((c) => c.name === "hoge")?.nodes).toHaveLength(1);
+    expect(customCategory?.totalNodeCount).toBe(2); // Counts the node twice (once per category)
+  });
+
+  it("filters out parent when both parent and child are specified", () => {
+    const nested = groupNodeDefinitionsNested([
+      baseNode({ type: "child-only", displayName: "Child Only", category: ["custom", "custom/ui"] }),
+    ]);
+
+    const customCategory = nested.find((c) => c.name === "custom");
+    // Should only appear in custom/ui, not directly in custom
+    expect(customCategory?.nodes).toHaveLength(0);
+    expect(customCategory?.children[0]?.name).toBe("ui");
+    expect(customCategory?.children[0]?.nodes).toHaveLength(1);
   });
 });

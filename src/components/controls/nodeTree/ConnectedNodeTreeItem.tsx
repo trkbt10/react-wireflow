@@ -13,9 +13,7 @@ import type { ConnectedNodeTreeItemProps } from "./types";
 export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
   nodeId,
   level,
-  dragState,
   onNodeDrop,
-  onDragStateChange,
 }) => {
   const { state: editorState, actions } = useNodeEditor();
   const { state: actionState, actions: actionActions } = useEditorActionState();
@@ -97,9 +95,7 @@ export const ConnectedNodeTreeItem: React.FC<ConnectedNodeTreeItemProps> = ({
       onDeleteNode={handleDeleteNode}
       onUpdateTitle={handleUpdateTitle}
       childNodes={childNodes}
-      dragState={dragState}
       onNodeDrop={onNodeDrop}
-      onDragStateChange={onDragStateChange}
     />
   );
 };

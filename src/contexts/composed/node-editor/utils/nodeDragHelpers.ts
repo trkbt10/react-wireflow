@@ -137,7 +137,7 @@ export function handleGroupMovement(
   nodes: Record<string, Node>,
   snappedPositions: Record<string, { x: number; y: number }>,
   initialPositions: Record<string, { x: number; y: number }>,
-  moveGroupWithChildren: (groupId: string, delta: { x: number; y: number }) => void,
+  moveGroupWithChildren: (groupId: string, delta: { x: number; y: number }, affectedNodeIds: string[]) => void,
   nodeDefinitions: NodeDefinition[],
 ): Record<string, { x: number; y: number }> {
   const groupsToMove = nodeIds.filter((nodeId) => {
@@ -158,7 +158,10 @@ export function handleGroupMovement(
         x: finalPos.x - initialPos.x,
         y: finalPos.y - initialPos.y,
       };
-      moveGroupWithChildren(groupId, delta);
+      const affectedNodeIds = Object.values(nodes)
+        .filter((candidate) => candidate.id === groupId || candidate.parentId === groupId)
+        .map((candidate) => candidate.id);
+      moveGroupWithChildren(groupId, delta, affectedNodeIds);
     }
   });
 

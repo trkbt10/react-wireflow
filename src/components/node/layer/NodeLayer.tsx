@@ -12,7 +12,12 @@ import {
   useCanvasInteractionDragState,
   useDragNodeIdsSets,
 } from "../../../contexts/composed/canvas/interaction/context";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import {
+  useNodeEditorConnectedPortIdsByNode,
+  useNodeEditorConnectedPorts,
+  useNodeEditorSelector,
+  useNodeEditorSortedNodeIds,
+} from "../../../contexts/composed/node-editor/context";
 import { useGroupManagement } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { useNodeResize } from "../../../contexts/composed/canvas/interaction/hooks/useNodeResize";
 import { useVisibleNodes } from "../../../contexts/composed/canvas/viewport/hooks/useVisibleNodes";
@@ -26,9 +31,81 @@ import { useNodeCanvasGridSettings } from "../../../contexts/composed/canvas/vie
 import { EMPTY_CONNECTABLE_PORTS, isConnectablePortsEmpty } from "../../../core/port/connectivity/connectableTypes";
 import { parsePortKey } from "../../../core/port/identity/key";
 import { useStableCallback } from "../../../hooks/useStableCallback";
+import type { Port, Position } from "../../../types/core";
+import type { ConnectablePortsResult } from "../../../core/port/connectivity/connectableTypes";
+import type { NodeViewProps } from "../NodeView";
 
 export type NodeLayerProps = {
   doubleClickToEdit?: boolean;
+};
+
+type NodeItemProps = {
+  nodeId: string;
+  isSelected: boolean;
+  isDragging: boolean;
+  dragOffset?: Position;
+  onNodePointerDown: (e: React.PointerEvent, nodeId: string, isDragAllowed?: boolean) => void;
+  onNodeContextMenu: (e: React.MouseEvent, nodeId: string) => void;
+  onPortPointerDown: (e: React.PointerEvent, port: Port) => void;
+  onPortPointerUp: (e: React.PointerEvent, port: Port) => void;
+  onPortPointerEnter: (e: React.PointerEvent, port: Port) => void;
+  onPortPointerMove: (e: React.PointerEvent, port: Port) => void;
+  onPortPointerLeave: (e: React.PointerEvent, port: Port) => void;
+  onPortPointerCancel: (e: React.PointerEvent, port: Port) => void;
+  connectablePortsForNode: ConnectablePortsResult;
+  connectingPortForNode?: Port;
+  hoveredPortForNode?: Port;
+  candidatePortIdForNode?: string;
+  connectedPortIdsByNode: ReadonlyMap<string, ReadonlySet<string>>;
+  NodeComponent: React.ComponentType<NodeViewProps>;
+};
+
+const NodeItem: React.FC<NodeItemProps> = ({
+  nodeId,
+  isSelected,
+  isDragging,
+  dragOffset,
+  onNodePointerDown,
+  onNodeContextMenu,
+  onPortPointerDown,
+  onPortPointerUp,
+  onPortPointerEnter,
+  onPortPointerMove,
+  onPortPointerLeave,
+  onPortPointerCancel,
+  connectablePortsForNode,
+  connectingPortForNode,
+  hoveredPortForNode,
+  candidatePortIdForNode,
+  connectedPortIdsByNode,
+  NodeComponent,
+}) => {
+  const node = useNodeEditorSelector((state) => state.nodes[nodeId], { areEqual: (a, b) => a === b });
+  if (!node) {
+    return null;
+  }
+
+  return (
+    <NodeComponent
+      node={node}
+      isSelected={isSelected}
+      isDragging={isDragging}
+      dragOffset={dragOffset}
+      onPointerDown={onNodePointerDown}
+      onContextMenu={onNodeContextMenu}
+      onPortPointerDown={onPortPointerDown}
+      onPortPointerUp={onPortPointerUp}
+      onPortPointerEnter={onPortPointerEnter}
+      onPortPointerMove={onPortPointerMove}
+      onPortPointerLeave={onPortPointerLeave}
+      onPortPointerCancel={onPortPointerCancel}
+      connectablePorts={connectablePortsForNode}
+      connectingPort={connectingPortForNode}
+      hoveredPort={hoveredPortForNode}
+      connectedPortIds={connectedPortIdsByNode.get(node.id)}
+      candidatePortId={candidatePortIdForNode}
+    />
+  );
 };
 
 /**
@@ -36,7 +113,9 @@ export type NodeLayerProps = {
  */
 const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => {
   void doubleClickToEdit;
-  const { sortedNodes, connectedPorts, connectedPortIdsByNode } = useNodeEditor();
+  const sortedNodeIds = useNodeEditorSortedNodeIds();
+  const connectedPorts = useNodeEditorConnectedPorts();
+  const connectedPortIdsByNode = useNodeEditorConnectedPortIdsByNode();
   const actionState = useEditorActionStateState();
   const { actions: actionActions } = useEditorActionStateActions();
   const dragState = useCanvasInteractionDragState();
@@ -58,7 +137,7 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   });
 
   // Get only visible nodes for virtualization
-  const visibleNodes = useVisibleNodes(sortedNodes);
+  const visibleNodeIds = useVisibleNodes(sortedNodeIds);
 
   // Update connected ports in action state only when changed
   React.useEffect(() => {
@@ -118,42 +197,43 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
 
   return (
     <div className={styles.nodeLayer} data-node-layer>
-      {visibleNodes.map((node) => {
+      {visibleNodeIds.map((nodeId) => {
         // O(1) lookup using shared Sets from context
-        const isDirectlyDragging = dragNodeIdsSets?.directlyDraggedNodeIds.has(node.id) ?? false;
-        const isInDragState = isDirectlyDragging || (dragNodeIdsSets?.affectedChildNodeIds.has(node.id) ?? false);
+        const isDirectlyDragging = dragNodeIdsSets?.directlyDraggedNodeIds.has(nodeId) ?? false;
+        const isInDragState = isDirectlyDragging || (dragNodeIdsSets?.affectedChildNodeIds.has(nodeId) ?? false);
         const dragOffset = isInDragState && dragState ? dragState.offset : undefined;
 
-        const hoveredPortForNode = hoveredPort?.nodeId === node.id ? hoveredPort : undefined;
+        const hoveredPortForNode = hoveredPort?.nodeId === nodeId ? hoveredPort : undefined;
 
         const connectingPortForNode =
-          connectionDragMeta?.fromPort.nodeId === node.id ? connectionDragMeta.fromPort : undefined;
+          connectionDragMeta?.fromPort.nodeId === nodeId ? connectionDragMeta.fromPort : undefined;
 
         const candidatePortIdForNode =
-          connectionDragMeta?.candidatePortNodeId === node.id ? connectionDragMeta.candidatePortId ?? undefined : undefined;
+          connectionDragMeta?.candidatePortNodeId === nodeId ? connectionDragMeta.candidatePortId ?? undefined : undefined;
 
-        const connectablePortsForNode = connectableNodeIds.has(node.id) ? connectablePorts : EMPTY_CONNECTABLE_PORTS;
+        const connectablePortsForNode = connectableNodeIds.has(nodeId) ? connectablePorts : EMPTY_CONNECTABLE_PORTS;
 
         return (
-          <NodeComponent
-            key={node.id}
-            node={node}
-            isSelected={selectedNodeIdsSet.has(node.id)}
+          <NodeItem
+            key={nodeId}
+            nodeId={nodeId}
+            isSelected={selectedNodeIdsSet.has(nodeId)}
             isDragging={isDirectlyDragging}
             dragOffset={dragOffset}
-            onPointerDown={onNodePointerDown}
-            onContextMenu={onNodeContextMenu}
+            onNodePointerDown={onNodePointerDown}
+            onNodeContextMenu={onNodeContextMenu}
             onPortPointerDown={onPortPointerDown}
             onPortPointerUp={onPortPointerUp}
             onPortPointerEnter={onPortPointerEnter}
             onPortPointerMove={onPortPointerMove}
             onPortPointerLeave={onPortPointerLeave}
             onPortPointerCancel={onPortPointerCancel}
-            connectablePorts={connectablePortsForNode}
-            connectingPort={connectingPortForNode}
-            hoveredPort={hoveredPortForNode}
-            connectedPortIds={connectedPortIdsByNode.get(node.id)}
-            candidatePortId={candidatePortIdForNode}
+            connectablePortsForNode={connectablePortsForNode}
+            connectingPortForNode={connectingPortForNode}
+            hoveredPortForNode={hoveredPortForNode}
+            candidatePortIdForNode={candidatePortIdForNode}
+            connectedPortIdsByNode={connectedPortIdsByNode}
+            NodeComponent={NodeComponent}
           />
         );
       })}

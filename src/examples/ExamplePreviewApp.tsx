@@ -43,6 +43,7 @@ import { AbsolutePortExample } from "./demos/custom/ports/absolute-port/Absolute
 import { ComfyUILayoutExample } from "./demos/custom/layouts/comfyui/ComfyUILayoutExample";
 import { CustomInspectorExample } from "./demos/custom/inspector/custom-inspector/CustomInspectorExample";
 import { NodeSearchMenuExample } from "./demos/custom/search/node-search-menu/NodeSearchMenuExample";
+import { MultiCategoryExample } from "./demos/custom/search/multi-category/MultiCategoryExample";
 import { NodeAddMenuExample } from "./demos/custom/menus/node-add-menu/NodeAddMenuExample";
 import { ConnectionRulesExample } from "./demos/custom/connections/connection-rules/ConnectionRulesExample";
 import { GroupScopeExample } from "./demos/custom/connections/group-scope/GroupScopeExample";
@@ -206,6 +207,13 @@ const examples: InternalExampleEntry[] = [
     title: "Node Search Menu (Split Pane)",
     description: "split pane view with nested category tree for node creation menu.",
     component: NodeSearchMenuExample,
+    category: "custom",
+  },
+  {
+    id: "multi-category",
+    title: "Multi-Category Nodes",
+    description: "Nodes with multiple categories, hierarchical prefix filtering, and Cmd/Ctrl+click multi-select.",
+    component: MultiCategoryExample,
     category: "custom",
   },
   {
@@ -438,7 +446,7 @@ export function ExamplePreviewApp(): React.ReactElement {
       ["custom-connector-renderer", "connection-rules", "group-scope-connection"].includes(ex.id)
     );
     const customUI = customExamples.filter((ex) =>
-      ["custom-inspector", "node-search-menu", "node-add-menu"].includes(ex.id)
+      ["custom-inspector", "node-search-menu", "multi-category", "node-add-menu"].includes(ex.id)
     );
 
     return [

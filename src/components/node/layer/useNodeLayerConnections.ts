@@ -10,7 +10,7 @@ import {
 } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitions } from "../../../contexts/node-definitions/context";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import { useNodeEditorApi } from "../../../contexts/composed/node-editor/context";
 import { getConnectableNodeTypes } from "../../../core/port/connectivity/connectability";
 import { useConnectionPortResolvers } from "../../../contexts/node-ports/hooks/useConnectionPortResolvers";
 import { useConnectionOperations } from "../../../contexts/node-ports/hooks/useConnectionOperations";
@@ -26,7 +26,7 @@ export const useNodeLayerConnections = () => {
   const connectionDragMeta = useCanvasInteractionConnectionDragMeta();
   const isDisconnecting = useCanvasInteractionConnectionDisconnectActive();
   const { actions: interactionActions, getState: getInteractionState } = useCanvasInteractionActions();
-  const { state: nodeEditorState, getState: getNodeEditorState, getNodePorts } = useNodeEditor();
+  const { getState: getNodeEditorState, getNodePorts } = useNodeEditorApi();
   const utils = useNodeCanvasUtils();
   const { registry } = useNodeDefinitions();
   const { resolveCandidatePort, resolveDisconnectCandidate } = useConnectionPortResolvers();
@@ -44,7 +44,6 @@ export const useNodeLayerConnections = () => {
   const endConnectionDragRef = useLatestRef(endConnectionDrag);
   const endConnectionDisconnectRef = useLatestRef(endConnectionDisconnect);
   const actionActionsRef = useLatestRef(actionActions);
-  const nodeEditorStateRef = useLatestRef(nodeEditorState);
   const getNodeEditorStateRef = useLatestRef(getNodeEditorState);
   const getNodePortsRef = useLatestRef(getNodePorts);
   const utilsRef = useLatestRef(utils);
@@ -146,7 +145,7 @@ export const useNodeLayerConnections = () => {
 
     if (!candidatePort || fromPort.id === candidatePort.id) {
       const screen = utilsRef.current.canvasToScreen(toPosition.x, toPosition.y);
-      const editorState = nodeEditorStateRef.current;
+      const editorState = getNodeEditorStateRef.current();
       const reg = registryRef.current;
       const allowed = getConnectableNodeTypes({
         fromPort,

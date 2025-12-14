@@ -2,9 +2,10 @@
  * @file Hook for calculating which nodes are visible in the current viewport
  */
 import * as React from "react";
-import type { Node } from "../../../../../types/core";
+import type { Node, NodeId } from "../../../../../types/core";
 import { useNodeCanvasApi } from "../context";
 import { useRafThrottledCallback } from "../../../../../hooks/useRafThrottledCallback";
+import { useNodeEditorApi } from "../../../node-editor/context";
 
 type ViewportBounds = {
   left: number;
@@ -13,7 +14,7 @@ type ViewportBounds = {
   bottom: number;
 };
 
-const areVisibleNodeListsEqual = (a: readonly Node[], b: readonly Node[]): boolean => {
+const areVisibleNodeIdListsEqual = (a: readonly NodeId[], b: readonly NodeId[]): boolean => {
   if (a === b) {
     return true;
   }
@@ -21,9 +22,6 @@ const areVisibleNodeListsEqual = (a: readonly Node[], b: readonly Node[]): boole
     return false;
   }
   for (let i = 0; i < a.length; i++) {
-    if (a[i].id !== b[i].id) {
-      return false;
-    }
     if (a[i] !== b[i]) {
       return false;
     }
@@ -31,12 +29,12 @@ const areVisibleNodeListsEqual = (a: readonly Node[], b: readonly Node[]): boole
   return true;
 };
 
-const computeVisibleNodes = (
+const computeVisibleNodeIds = (
   nodes: readonly Node[],
   viewport: { offset: { x: number; y: number }; scale: number },
   viewBox: { width: number; height: number },
   bufferFactor: number,
-): Node[] => {
+): NodeId[] => {
   const containerWidth = viewBox.width > 0 ? viewBox.width : (typeof window !== "undefined" ? window.innerWidth : 0);
   const containerHeight = viewBox.height > 0 ? viewBox.height : (typeof window !== "undefined" ? window.innerHeight : 0);
 
@@ -48,49 +46,59 @@ const computeVisibleNodes = (
     bottom: (containerHeight - viewport.offset.y + buffer) / viewport.scale,
   };
 
-  return nodes.filter((node) => {
+  const visible: NodeId[] = [];
+  nodes.forEach((node) => {
     if (node.visible === false) {
-      return false;
+      return;
     }
     const nodeWidth = node.size?.width || 150;
     const nodeHeight = node.size?.height || 50;
-    return (
+    const isVisible =
       node.position.x + nodeWidth >= bounds.left &&
       node.position.x <= bounds.right &&
       node.position.y + nodeHeight >= bounds.top &&
       node.position.y <= bounds.bottom
-    );
+    ;
+    if (isVisible) {
+      visible.push(node.id);
+    }
   });
+  return visible;
 };
 
 /**
  * Hook to calculate which nodes are visible in the current viewport
  * Adds a buffer zone to prevent nodes from popping in/out during pan
  */
-export const useVisibleNodes = (nodes: readonly Node[], bufferFactor: number = 1.5): Node[] => {
+export const useVisibleNodes = (nodeIds: readonly NodeId[], bufferFactor: number = 1.5): NodeId[] => {
   const { store } = useNodeCanvasApi();
-  const nodesRef = React.useRef(nodes);
-  nodesRef.current = nodes;
+  const { getState: getNodeEditorState, subscribeToChanges } = useNodeEditorApi();
+  const nodeIdsRef = React.useRef(nodeIds);
+  nodeIdsRef.current = nodeIds;
 
   const bufferFactorRef = React.useRef(bufferFactor);
   bufferFactorRef.current = bufferFactor;
 
-  const [visibleNodes, setVisibleNodes] = React.useState<Node[]>(() => {
+  const [visibleNodeIds, setVisibleNodeIds] = React.useState<NodeId[]>(() => {
     const state = store.getState();
-    return computeVisibleNodes(nodes, state.viewport, state.viewBox, bufferFactor);
+    const nodes = nodeIds.map((nodeId) => getNodeEditorState().nodes[nodeId]).filter(Boolean) as Node[];
+    return computeVisibleNodeIds(nodes, state.viewport, state.viewBox, bufferFactor);
   });
 
-  const visibleNodesRef = React.useRef<Node[]>(visibleNodes);
-  visibleNodesRef.current = visibleNodes;
+  const visibleNodeIdsRef = React.useRef<NodeId[]>(visibleNodeIds);
+  visibleNodeIdsRef.current = visibleNodeIds;
 
   const updateVisibleNodes = React.useEffectEvent(() => {
     const state = store.getState();
-    const computed = computeVisibleNodes(nodesRef.current, state.viewport, state.viewBox, bufferFactorRef.current);
-    if (areVisibleNodeListsEqual(visibleNodesRef.current, computed)) {
+    const nodes = nodeIdsRef.current
+      .map((nodeId) => getNodeEditorState().nodes[nodeId])
+      .filter(Boolean) as Node[];
+    const computed = computeVisibleNodeIds(nodes, state.viewport, state.viewBox, bufferFactorRef.current);
+    if (areVisibleNodeIdListsEqual(visibleNodeIdsRef.current, computed)) {
       return;
     }
-    visibleNodesRef.current = computed;
-    setVisibleNodes(computed);
+    visibleNodeIdsRef.current = computed;
+    setVisibleNodeIds(computed);
   });
 
   const { schedule, cancel } = useRafThrottledCallback<void>(() => {
@@ -99,15 +107,26 @@ export const useVisibleNodes = (nodes: readonly Node[], bufferFactor: number = 1
 
   React.useEffect(() => {
     updateVisibleNodes();
-  }, [nodes, bufferFactor]);
+  }, [nodeIds, bufferFactor]);
 
   React.useLayoutEffect(() => {
-    return store.subscribe(() => {
+    const unsubscribeCanvas = store.subscribe(() => {
       schedule(undefined);
     });
-  }, [store, schedule]);
+
+    const unsubscribeEditor = subscribeToChanges((change) => {
+      if (change.affectsGeometry || change.fullResync) {
+        schedule(undefined);
+      }
+    });
+
+    return () => {
+      unsubscribeCanvas();
+      unsubscribeEditor();
+    };
+  }, [store, schedule, subscribeToChanges]);
 
   React.useEffect(() => cancel, [cancel]);
 
-  return visibleNodesRef.current;
+  return visibleNodeIdsRef.current;
 };

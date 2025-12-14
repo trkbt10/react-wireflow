@@ -7,6 +7,8 @@ import type { Node } from "../../../../../types/core";
 import { useVisibleNodes } from "./useVisibleNodes";
 import { useNodeCanvas } from "../context";
 import { NodeCanvasProvider } from "../provider";
+import { NodeEditorProvider } from "../../../node-editor/provider";
+import { NodeDefinitionProvider } from "../../../../node-definitions/provider";
 
 const nodes: readonly Node[] = [
   {
@@ -27,22 +29,37 @@ const nodes: readonly Node[] = [
 
 const Harness: FC = () => {
   const { actions } = useNodeCanvas();
-  const visibleNodes = useVisibleNodes(nodes, 1);
+  const visibleNodeIds = useVisibleNodes(
+    nodes.map((n) => n.id),
+    1,
+  );
 
   useEffect(() => {
     actions.setViewBox({ width: 100, height: 100 });
     actions.setViewport({ offset: { x: 0, y: 0 }, scale: 1 });
   }, [actions]);
 
-  return <div data-testid="ids">{visibleNodes.map((n) => n.id).join(",")}</div>;
+  return <div data-testid="ids">{visibleNodeIds.join(",")}</div>;
 };
 
 describe("useVisibleNodes", () => {
   it("uses canvas viewBox (not window) for visibility", async () => {
     const { getByTestId } = render(
-      <NodeCanvasProvider>
-        <Harness />
-      </NodeCanvasProvider>,
+      <NodeDefinitionProvider nodeDefinitions={[]}>
+        <NodeEditorProvider
+          initialState={{
+            nodes: {
+              a: nodes[0],
+              b: nodes[1],
+            },
+            connections: {},
+          }}
+        >
+          <NodeCanvasProvider>
+            <Harness />
+          </NodeCanvasProvider>
+        </NodeEditorProvider>
+      </NodeDefinitionProvider>,
     );
     await act(async () => {
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));

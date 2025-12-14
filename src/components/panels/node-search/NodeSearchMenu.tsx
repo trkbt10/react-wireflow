@@ -58,7 +58,7 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = React.useState<Set<string>>(() => new Set());
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Group node definitions based on view mode
@@ -87,19 +87,20 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
 
   // Filter nodes based on search query, view mode, and filter mode
   const filteredListResults = React.useMemo<NodeDefinitionCategory[]>(() => {
-    if (!searchQuery.trim()) {
-      return selectedCategory && viewMode === "list"
-        ? groupedDefinitions.filter((category) => category.name === selectedCategory)
-        : groupedDefinitions;
+    let results = groupedDefinitions;
+
+    // Apply search filter first (only in filter mode)
+    if (searchQuery.trim() && filterMode === "filter") {
+      results = filterGroupedNodeDefinitions(results, searchQuery);
     }
-    // In highlight mode, show all nodes (filtered only by selected category)
-    if (filterMode === "highlight") {
-      return selectedCategory && viewMode === "list"
-        ? groupedDefinitions.filter((category) => category.name === selectedCategory)
-        : groupedDefinitions;
+
+    // Then apply category filter for list mode
+    if (viewMode === "list" && selectedCategories.size > 0) {
+      results = results.filter((category) => selectedCategories.has(category.name));
     }
-    return filterGroupedNodeDefinitions(groupedDefinitions, searchQuery);
-  }, [groupedDefinitions, searchQuery, selectedCategory, viewMode, filterMode]);
+
+    return results;
+  }, [groupedDefinitions, searchQuery, selectedCategories, viewMode, filterMode]);
 
   const filteredNestedResults = React.useMemo<NestedNodeDefinitionCategory[]>(() => {
     if (!searchQuery.trim()) {
@@ -115,8 +116,8 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
   // Get all nodes in flat list for keyboard navigation
   const allNodes = React.useMemo(() => {
     if (viewMode === "split") {
-      // When "All Nodes" is selected (no category), use grouped order to match CategoryListView display
-      if (selectedCategory === null) {
+      // When "All Nodes" is selected (no categories), use grouped order to match CategoryListView display
+      if (selectedCategories.size === 0) {
         return flattenGroupedNodeDefinitions(filteredListResults);
       }
       return flattenNestedNodeDefinitions(filteredNestedResults).map((item) => ({
@@ -125,7 +126,7 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
       }));
     }
     return flattenGroupedNodeDefinitions(filteredListResults);
-  }, [viewMode, filteredListResults, filteredNestedResults, selectedCategory]);
+  }, [viewMode, filteredListResults, filteredNestedResults, selectedCategories.size]);
 
   const nodeIndexByType = React.useMemo(() => {
     return allNodes.reduce<Map<string, number>>((map, entry, index) => {
@@ -146,11 +147,56 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
     if (visible) {
       setSearchQuery("");
       setSelectedIndex(0);
-      setSelectedCategory(null);
+      setSelectedCategories(new Set());
     }
   }, [visible, position]);
 
   const disabledSet = React.useMemo(() => new Set(disabledNodeTypes), [disabledNodeTypes]);
+
+  /**
+   * Handle category selection with multi-select support.
+   * - Normal click: single select (clears others)
+   * - Cmd/Ctrl+click: toggle selection (add/remove from set)
+   * - Clicking "All" (null): clears all selections
+   */
+  const handleCategorySelect = React.useCallback(
+    (categoryPath: string | null, multiSelect: boolean) => {
+      if (categoryPath === null) {
+        // "All" clicked - clear all selections
+        setSelectedCategories(new Set());
+        setSelectedIndex(0);
+        return;
+      }
+
+      setSelectedCategories((prev) => {
+        if (multiSelect) {
+          // Toggle selection
+          const next = new Set(prev);
+          if (next.has(categoryPath)) {
+            next.delete(categoryPath);
+          } else {
+            next.add(categoryPath);
+          }
+          return next;
+        }
+        // Single select - replace with just this category
+        // If already selected alone, toggle off
+        if (prev.size === 1 && prev.has(categoryPath)) {
+          return new Set();
+        }
+        return new Set([categoryPath]);
+      });
+      setSelectedIndex(0);
+    },
+    [],
+  );
+
+  const handleCategoryClick = React.useCallback(
+    (categoryName: string, multiSelect: boolean) => {
+      handleCategorySelect(categoryName, multiSelect);
+    },
+    [handleCategorySelect],
+  );
 
   // Handle keyboard navigation
   const handleKeyDown = React.useCallback(
@@ -181,27 +227,22 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
         case "Tab": {
           e.preventDefault();
           if (viewMode === "list") {
-            // Cycle through categories in list mode
-            const currentCategoryIndex = groupedDefinitions.findIndex((cat) => cat.name === selectedCategory);
-            const nextIndex = (currentCategoryIndex + 1) % groupedDefinitions.length;
-            setSelectedCategory(groupedDefinitions[nextIndex]?.name || null);
-            setSelectedIndex(0);
+            // Cycle through categories in list mode (single select behavior)
+            const categoryNames = groupedDefinitions.map((cat) => cat.name);
+            const currentSelected = selectedCategories.size === 1 ? [...selectedCategories][0] : null;
+            const currentIndex = currentSelected ? categoryNames.indexOf(currentSelected) : -1;
+            const nextIndex = (currentIndex + 1) % categoryNames.length;
+            const nextCategory = categoryNames[nextIndex];
+            if (nextCategory) {
+              setSelectedCategories(new Set([nextCategory]));
+              setSelectedIndex(0);
+            }
           }
           break;
         }
       }
     },
-    [
-      allNodes,
-      selectedIndex,
-      onCreateNode,
-      position,
-      onClose,
-      groupedDefinitions,
-      selectedCategory,
-      disabledSet,
-      viewMode,
-    ],
+    [allNodes, selectedIndex, onCreateNode, position, onClose, groupedDefinitions, selectedCategories, disabledSet, viewMode],
   );
 
   // Handle node selection
@@ -225,7 +266,7 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
     if (menuWidth === undefined) {
       return undefined;
     }
-    return { "--_menu-min-width": `${menuWidth}px` } as React.CSSProperties;
+    return { "--_menu-width-override": `${menuWidth}px` } as React.CSSProperties;
   }, [menuWidth]);
 
   if (!visible) {
@@ -264,8 +305,8 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
             <SplitPaneView
               categories={filteredNestedResults}
               groupedCategories={filteredListResults}
-              selectedCategoryPath={selectedCategory}
-              onCategorySelect={setSelectedCategory}
+              selectedCategoryPaths={selectedCategories}
+              onCategorySelect={handleCategorySelect}
               selectedNodeIndex={selectedIndex}
               onNodeSelect={handleNodeSelect}
               onNodeHover={handleNodeHover}
@@ -276,8 +317,8 @@ export const NodeSearchMenu: React.FC<NodeSearchMenuProps> = ({
           ) : (
             <CategoryListView
               categories={filteredListResults}
-              selectedCategory={selectedCategory}
-              onCategoryClick={setSelectedCategory}
+              selectedCategories={selectedCategories}
+              onCategoryClick={handleCategoryClick}
               selectedIndex={selectedIndex}
               onNodeSelect={handleNodeSelect}
               onNodeHover={handleNodeHover}

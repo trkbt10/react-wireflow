@@ -228,10 +228,27 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, sho
 
   // Handle keyboard shortcuts (Figma style)
   React.useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      const editable = target.closest(
+        'input, textarea, select, [contenteditable="true"], [role="textbox"], [role="searchbox"], [role="combobox"]',
+      );
+      return Boolean(editable);
+    };
+
+    const didActivateSpacePanningRef = { current: false };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Space for panning mode
       if (e.code === "Space" && !e.repeat && !e.ctrlKey && !e.metaKey) {
+        if (isEditableTarget(e.target)) {
+          return;
+        }
         e.preventDefault();
+        didActivateSpacePanningRef.current = true;
         canvasActions.setSpacePanning(true);
       }
 
@@ -261,7 +278,11 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, sho
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
+        if (!didActivateSpacePanningRef.current) {
+          return;
+        }
         e.preventDefault();
+        didActivateSpacePanningRef.current = false;
         canvasActions.setSpacePanning(false);
       }
     };

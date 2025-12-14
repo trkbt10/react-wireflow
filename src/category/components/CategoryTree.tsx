@@ -8,8 +8,14 @@ import styles from "./CategoryTree.module.css";
 
 export type CategoryTreeProps = {
   categories: NestedNodeDefinitionCategory[];
-  selectedPath: string | null;
-  onSelect: (path: string | null) => void;
+  /** Selected category paths (empty set means "All" is selected) */
+  selectedPaths: Set<string>;
+  /**
+   * Called when a category is clicked.
+   * @param path - The clicked category path (null for "All")
+   * @param multiSelect - Whether this is a multi-select action (Cmd/Ctrl+click)
+   */
+  onSelect: (path: string | null, multiSelect: boolean) => void;
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
 };
@@ -18,9 +24,9 @@ type CategoryTreeItemProps = {
   category: NestedNodeDefinitionCategory;
   isSelected: boolean;
   isExpanded: boolean;
-  onSelect: (path: string) => void;
+  onSelect: (path: string, multiSelect: boolean) => void;
   onToggle: (path: string) => void;
-  selectedPath: string | null;
+  selectedPaths: Set<string>;
   expandedPaths: Set<string>;
 };
 
@@ -30,14 +36,18 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
   isExpanded,
   onSelect,
   onToggle,
-  selectedPath,
+  selectedPaths,
   expandedPaths,
 }) => {
   const hasChildren = category.children.length > 0;
 
-  const handleClick = React.useCallback(() => {
-    onSelect(category.path);
-  }, [category.path, onSelect]);
+  const handleClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      const isMultiSelect = e.metaKey || e.ctrlKey;
+      onSelect(category.path, isMultiSelect);
+    },
+    [category.path, onSelect],
+  );
 
   const handleToggle = React.useCallback(
     (e: React.MouseEvent) => {
@@ -54,7 +64,7 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
         data-is-selected={isSelected}
         data-depth={category.depth}
         onClick={handleClick}
-        style={{ paddingLeft: `calc(var(--node-editor-space-md) + ${category.depth * 16}px)` }}
+        style={{ paddingLeft: `calc(var(--node-editor-space-md) * ${category.depth}px)` }}
       >
         {hasChildren ? (
           <button
@@ -82,11 +92,11 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
             <CategoryTreeItem
               key={child.path}
               category={child}
-              isSelected={selectedPath === child.path}
+              isSelected={selectedPaths.has(child.path)}
               isExpanded={expandedPaths.has(child.path)}
               onSelect={onSelect}
               onToggle={onToggle}
-              selectedPath={selectedPath}
+              selectedPaths={selectedPaths}
               expandedPaths={expandedPaths}
             />
           ))}
@@ -100,7 +110,7 @@ CategoryTreeItem.displayName = "CategoryTreeItem";
 
 export const CategoryTree: React.FC<CategoryTreeProps> = ({
   categories,
-  selectedPath,
+  selectedPaths,
   onSelect,
   expandedPaths,
   onToggle,
@@ -109,13 +119,31 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
     return categories.reduce((sum, c) => sum + c.totalNodeCount, 0);
   }, [categories]);
 
+  const handleAllClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      const isMultiSelect = e.metaKey || e.ctrlKey;
+      onSelect(null, isMultiSelect);
+    },
+    [onSelect],
+  );
+
+  const handleCategorySelect = React.useCallback(
+    (path: string, multiSelect: boolean) => {
+      onSelect(path, multiSelect);
+    },
+    [onSelect],
+  );
+
+  // "All" is selected when no specific categories are selected
+  const isAllSelected = selectedPaths.size === 0;
+
   return (
     <div className={styles.categoryTree}>
       <div
         className={styles.treeItemHeader}
-        data-is-selected={selectedPath === null}
+        data-is-selected={isAllSelected}
         data-depth={0}
-        onClick={() => onSelect(null)}
+        onClick={handleAllClick}
       >
         <span className={styles.expandPlaceholder} />
         <span className={styles.categoryLabel}>All</span>
@@ -125,11 +153,11 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
         <CategoryTreeItem
           key={category.path}
           category={category}
-          isSelected={selectedPath === category.path}
+          isSelected={selectedPaths.has(category.path)}
           isExpanded={expandedPaths.has(category.path)}
-          onSelect={onSelect}
+          onSelect={handleCategorySelect}
           onToggle={onToggle}
-          selectedPath={selectedPath}
+          selectedPaths={selectedPaths}
           expandedPaths={expandedPaths}
         />
       ))}

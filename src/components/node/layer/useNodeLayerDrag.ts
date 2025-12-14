@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 import { useCanvasInteractionActions, useCanvasInteractionDragState } from "../../../contexts/composed/canvas/interaction/context";
 import { useNodeCanvasGridSettings, useNodeCanvasViewportScale } from "../../../contexts/composed/canvas/viewport/context";
 import { useNodeDefinitionList } from "../../../contexts/node-definitions/hooks/useNodeDefinitionList";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import { useNodeEditorApi } from "../../../contexts/composed/node-editor/context";
 import { snapMultipleToGrid } from "../../../contexts/composed/node-editor/utils/gridSnap";
 import { calculateNewPositions, handleGroupMovement } from "../../../contexts/composed/node-editor/utils/nodeDragHelpers";
 import type { UseGroupManagementResult } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
@@ -17,7 +17,7 @@ import { useLatestRef } from "../../../hooks/useLatestRef";
 export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult["moveGroupWithChildren"]) => {
   const dragState = useCanvasInteractionDragState();
   const { actions: interactionActions } = useCanvasInteractionActions();
-  const { state: nodeEditorState, actions: nodeEditorActions } = useNodeEditor();
+  const { actions: nodeEditorActions, getState: getNodeEditorState } = useNodeEditorApi();
   const viewportScale = useNodeCanvasViewportScale();
   const gridSettings = useNodeCanvasGridSettings();
   const nodeDefinitions = useNodeDefinitionList();
@@ -25,7 +25,7 @@ export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult
   const dragStateRef = useLatestRef<DragState | null>(dragState);
   const viewportScaleRef = useLatestRef(viewportScale);
   const gridSettingsRef = useLatestRef(gridSettings);
-  const nodeEditorNodesRef = useLatestRef(nodeEditorState.nodes);
+  const getNodeEditorStateRef = useLatestRef(getNodeEditorState);
   const nodeDefinitionsRef = useLatestRef(nodeDefinitions);
   const moveGroupWithChildrenRef = useLatestRef(moveGroupWithChildren);
   const nodeEditorActionsRef = useLatestRef(nodeEditorActions);
@@ -68,7 +68,7 @@ export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult
 
     const finalPositions = handleGroupMovement(
       nodeIds,
-      nodeEditorNodesRef.current,
+      getNodeEditorStateRef.current().nodes,
       snappedPositions,
       initialPositions,
       moveGroupWithChildrenRef.current,

@@ -4,6 +4,7 @@
 import * as React from "react";
 import { createAction, type ActionUnion, type BoundActionCreators } from "../../../../utils/typedActions";
 import type { Position, Viewport, GridSettings } from "../../../../types/core";
+import { useExternalStoreSelector } from "../../../../hooks/useExternalStoreSelector";
 import type { createCanvasUtils } from "./utils/coordinateConversion";
 import type { NodeCanvasStore } from "./store";
 
@@ -80,7 +81,7 @@ export const useNodeCanvasState = (): NodeCanvasState => {
   if (!context) {
     throw new Error("useNodeCanvasState must be used within a NodeCanvasProvider");
   }
-  return React.useSyncExternalStore(context.store.subscribe, context.store.getState, context.store.getState);
+  return useExternalStoreSelector(context.store.subscribe, context.store.getState, (state) => state);
 };
 
 export const useNodeCanvasViewportOffset = (): Position => {
@@ -88,11 +89,7 @@ export const useNodeCanvasViewportOffset = (): Position => {
   if (!context) {
     throw new Error("useNodeCanvasViewportOffset must be used within a NodeCanvasProvider");
   }
-  return React.useSyncExternalStore(
-    context.store.subscribe,
-    () => context.store.getState().viewport.offset,
-    () => context.store.getState().viewport.offset,
-  );
+  return useExternalStoreSelector(context.store.subscribe, context.store.getState, (state) => state.viewport.offset);
 };
 
 export const useNodeCanvasViewportScale = (): number => {
@@ -100,11 +97,7 @@ export const useNodeCanvasViewportScale = (): number => {
   if (!context) {
     throw new Error("useNodeCanvasViewportScale must be used within a NodeCanvasProvider");
   }
-  return React.useSyncExternalStore(
-    context.store.subscribe,
-    () => context.store.getState().viewport.scale,
-    () => context.store.getState().viewport.scale,
-  );
+  return useExternalStoreSelector(context.store.subscribe, context.store.getState, (state) => state.viewport.scale);
 };
 
 export const useNodeCanvasPanActive = (): boolean => {
@@ -112,17 +105,9 @@ export const useNodeCanvasPanActive = (): boolean => {
   if (!context) {
     throw new Error("useNodeCanvasPanActive must be used within a NodeCanvasProvider");
   }
-  return React.useSyncExternalStore(
-    context.store.subscribe,
-    () => {
-      const state = context.store.getState();
-      return state.isSpacePanning || state.panState.isPanning;
-    },
-    () => {
-      const state = context.store.getState();
-      return state.isSpacePanning || state.panState.isPanning;
-    },
-  );
+  return useExternalStoreSelector(context.store.subscribe, context.store.getState, (state) => {
+    return state.isSpacePanning || state.panState.isPanning;
+  });
 };
 
 export const useNodeCanvasGridSettings = (): GridSettings => {
@@ -130,11 +115,7 @@ export const useNodeCanvasGridSettings = (): GridSettings => {
   if (!context) {
     throw new Error("useNodeCanvasGridSettings must be used within a NodeCanvasProvider");
   }
-  return React.useSyncExternalStore(
-    context.store.subscribe,
-    () => context.store.getState().gridSettings,
-    () => context.store.getState().gridSettings,
-  );
+  return useExternalStoreSelector(context.store.subscribe, context.store.getState, (state) => state.gridSettings);
 };
 
 /**
@@ -167,7 +148,7 @@ export const useNodeCanvas = (): NodeCanvasContextValue => {
   if (!context) {
     throw new Error("useNodeCanvas must be used within a NodeCanvasProvider");
   }
-  const state = React.useSyncExternalStore(context.store.subscribe, context.store.getState, context.store.getState);
+  const state = useExternalStoreSelector(context.store.subscribe, context.store.getState, (s) => s);
   return {
     ...context,
     state,

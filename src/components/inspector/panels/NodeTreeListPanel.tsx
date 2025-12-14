@@ -10,7 +10,7 @@ import { PropertySection } from "../parts/PropertySection";
 import { useI18n } from "../../../i18n/context";
 import { ConnectedNodeTreeItem } from "../../controls/nodeTree/ConnectedNodeTreeItem";
 import { useNodeDrop } from "../../controls/nodeTree/hooks/useNodeDrop";
-import type { DragState } from "../../controls/nodeTree/types";
+import { NodeTreeDragStateContext, createNodeTreeDragStateStore } from "../../controls/nodeTree/dragStateStore";
 import styles from "./NodeTreeListPanel.module.css";
 
 export type NodeTreeListPanelProps = Record<string, never>;
@@ -20,12 +20,7 @@ export const NodeTreeListPanel: React.FC<NodeTreeListPanelProps> = () => {
   const { actions: actionActions } = useEditorActionState();
   const nodeDefinitions = useNodeDefinitionList();
   const { t } = useI18n();
-
-  const [dragState, setDragState] = React.useState<DragState>({
-    draggingNodeId: null,
-    dragOverNodeId: null,
-    dragOverPosition: null,
-  });
+  const dragStateStore = React.useMemo(() => createNodeTreeDragStateStore(), []);
 
   // Get root level nodes (nodes without parent)
   const rootNodes = React.useMemo(() => {
@@ -58,10 +53,6 @@ export const NodeTreeListPanel: React.FC<NodeTreeListPanelProps> = () => {
     actionActions.clearSelection();
   }, [actionActions]);
 
-  const handleDragStateChange = React.useCallback((state: Partial<DragState>) => {
-    setDragState((prev) => ({ ...prev, ...state }));
-  }, []);
-
   const handleNodeDrop = useNodeDrop({
     nodes: editorState.nodes,
     nodeDefinitions,
@@ -81,22 +72,17 @@ export const NodeTreeListPanel: React.FC<NodeTreeListPanelProps> = () => {
       className={styles.nodeTreeList}
       bodyClassName={styles.nodeTreeListBody}
     >
-      <div className={styles.treeContainer} onClick={handleDeselectAll}>
-        {sortedRootNodes.length === 0 ? (
-          <div className={styles.emptyState}>No nodes yet</div>
-        ) : (
-          sortedRootNodes.map((node) => (
-            <ConnectedNodeTreeItem
-              key={node.id}
-              nodeId={node.id}
-              level={0}
-              dragState={dragState}
-              onNodeDrop={handleNodeDrop}
-              onDragStateChange={handleDragStateChange}
-            />
-          ))
-        )}
-      </div>
+      <NodeTreeDragStateContext.Provider value={dragStateStore}>
+        <div className={styles.treeContainer} onClick={handleDeselectAll}>
+          {sortedRootNodes.length === 0 ? (
+            <div className={styles.emptyState}>No nodes yet</div>
+          ) : (
+            sortedRootNodes.map((node) => (
+              <ConnectedNodeTreeItem key={node.id} nodeId={node.id} level={0} onNodeDrop={handleNodeDrop} />
+            ))
+          )}
+        </div>
+      </NodeTreeDragStateContext.Provider>
     </PropertySection>
   );
 };

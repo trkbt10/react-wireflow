@@ -4,10 +4,9 @@
  */
 import * as React from "react";
 import { useCanvasInteraction } from "../../contexts/composed/canvas/interaction/context";
-import { useNodeEditor } from "../../contexts/composed/node-editor/context";
+import { useNodeEditorApi, useNodeEditorSelector } from "../../contexts/composed/node-editor/context";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePortPosition";
-import { createPortKey } from "../../core/port/identity/key";
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
 import { useConnectionPathData } from "./ConnectionPath";
 import type { ConnectionRenderContext } from "../../types/NodeDefinition";
@@ -85,7 +84,7 @@ const resolveConnectionRenderer = (
 
 const useConnectingParams = (): DragConnectionParams | null => {
   const { state: interactionState } = useCanvasInteraction();
-  const { state: nodeEditorState, portLookupMap } = useNodeEditor();
+  const { getNodePorts } = useNodeEditorApi();
 
   const dragState = interactionState.connectionDragState;
 
@@ -97,21 +96,26 @@ const useConnectingParams = (): DragConnectionParams | null => {
   const dragStartPos = useDynamicConnectionPoint(dragStartNodeId, dragStartPortId);
   const candidatePos = useDynamicConnectionPoint(candidateNodeId, candidatePortId);
 
-  if (!dragState || !dragStartPos) {
+  const dragStartNode = useNodeEditorSelector((state) => state.nodes[dragStartNodeId], { areEqual: (a, b) => a === b });
+  const candidateNode = useNodeEditorSelector((state) => state.nodes[candidateNodeId], { areEqual: (a, b) => a === b });
+
+  const safeFindPort = React.useCallback((nodeId: string, portId: string): CorePort | undefined => {
+    if (!nodeId || !portId) {
+      return undefined;
+    }
+    try {
+      return getNodePorts(nodeId).find((p) => p.id === portId);
+    } catch {
+      return undefined;
+    }
+  }, [getNodePorts]);
+
+  if (!dragState || !dragStartPos || !dragStartNode) {
     return null;
   }
 
-  const dragStartPort = portLookupMap.get(createPortKey(dragStartNodeId, dragStartPortId))?.port ?? dragState.fromPort;
-  const dragStartNode = nodeEditorState.nodes[dragStartPort.nodeId];
-  if (!dragStartNode) {
-    return null;
-  }
-
-  const candidatePortFromLookup = candidateNodeId && candidatePortId
-    ? portLookupMap.get(createPortKey(candidateNodeId, candidatePortId))?.port
-    : undefined;
-  const candidatePort = candidatePortFromLookup ?? dragState.candidatePort ?? undefined;
-  const candidateNode = candidatePort ? nodeEditorState.nodes[candidatePort.nodeId] : undefined;
+  const dragStartPort = safeFindPort(dragStartNodeId, dragStartPortId) ?? dragState.fromPort;
+  const candidatePort = safeFindPort(candidateNodeId, candidatePortId) ?? dragState.candidatePort ?? undefined;
   const candidatePosition = candidatePort && candidatePos ? candidatePos : dragState.toPosition;
 
   return {
@@ -130,10 +134,10 @@ const useConnectingParams = (): DragConnectionParams | null => {
 
 const useDisconnectingParams = (): DragConnectionParams | null => {
   const { state: interactionState } = useCanvasInteraction();
-  const { state: nodeEditorState, portLookupMap } = useNodeEditor();
+  const { getNodePorts } = useNodeEditorApi();
 
   const disconnectState = interactionState.connectionDisconnectState;
-
+  const connectionId = disconnectState?.connectionId ?? "";
   const fixedNodeId = disconnectState?.fixedPort.nodeId ?? "";
   const fixedPortId = disconnectState?.fixedPort.id ?? "";
   const candidateNodeId = disconnectState?.candidatePort?.nodeId ?? "";
@@ -142,31 +146,47 @@ const useDisconnectingParams = (): DragConnectionParams | null => {
   const fixedPos = useDynamicConnectionPoint(fixedNodeId, fixedPortId);
   const candidatePos = useDynamicConnectionPoint(candidateNodeId, candidatePortId);
 
-  if (!disconnectState || !fixedPos) {
+  const storedConnection = useNodeEditorSelector(
+    (state) => (connectionId ? state.connections[connectionId] : undefined),
+    { areEqual: (a, b) => a === b },
+  );
+
+  const baseConnection = storedConnection ?? disconnectState?.originalConnection ?? null;
+
+  const safeFindPort = React.useCallback((nodeId: string, portId: string): CorePort | undefined => {
+    if (!nodeId || !portId) {
+      return undefined;
+    }
+    try {
+      return getNodePorts(nodeId).find((p) => p.id === portId);
+    } catch {
+      return undefined;
+    }
+  }, [getNodePorts]);
+
+  const fromNodeId = baseConnection?.fromNodeId ?? "";
+  const toNodeId = baseConnection?.toNodeId ?? "";
+
+  const outputNode = useNodeEditorSelector((state) => state.nodes[fromNodeId], { areEqual: (a, b) => a === b });
+  const inputNode = useNodeEditorSelector((state) => state.nodes[toNodeId], { areEqual: (a, b) => a === b });
+  const candidateNode = useNodeEditorSelector((state) => state.nodes[candidateNodeId], { areEqual: (a, b) => a === b });
+
+  if (!disconnectState || !fixedPos || !baseConnection) {
     return null;
   }
 
-  const baseConnection =
-    nodeEditorState.connections[disconnectState.connectionId] ?? disconnectState.originalConnection;
-
-  const originalOutputPort = portLookupMap.get(createPortKey(baseConnection.fromNodeId, baseConnection.fromPortId))?.port;
-  const originalInputPort = portLookupMap.get(createPortKey(baseConnection.toNodeId, baseConnection.toPortId))?.port;
+  const originalOutputPort = safeFindPort(baseConnection.fromNodeId, baseConnection.fromPortId);
+  const originalInputPort = safeFindPort(baseConnection.toNodeId, baseConnection.toPortId);
 
   if (!originalOutputPort || !originalInputPort) {
     return null;
   }
 
-  const outputNode = nodeEditorState.nodes[baseConnection.fromNodeId];
-  const inputNode = nodeEditorState.nodes[baseConnection.toNodeId];
   if (!outputNode || !inputNode) {
     return null;
   }
 
-  const candidatePortFromLookup = candidateNodeId && candidatePortId
-    ? portLookupMap.get(createPortKey(candidateNodeId, candidatePortId))?.port
-    : undefined;
-  const candidatePort = candidatePortFromLookup ?? disconnectState.candidatePort ?? undefined;
-  const candidateNode = candidatePort ? nodeEditorState.nodes[candidatePort.nodeId] : undefined;
+  const candidatePort = safeFindPort(candidateNodeId, candidatePortId) ?? disconnectState.candidatePort ?? undefined;
 
   const draggingPosition = disconnectState.draggingPosition;
   const candidatePosition = candidatePort && candidatePos ? candidatePos : draggingPosition;

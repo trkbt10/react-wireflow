@@ -35,9 +35,15 @@ export const GroupedNodeListPane: React.FC<GroupedNodeListPaneProps> = ({
   }, [categories]);
 
   // Dummy handler - in split view, categories are selected via the tree, not the list
-  const handleCategoryClickNoop = React.useCallback(() => {
-    // no-op
-  }, []);
+  const handleCategoryClickNoop = React.useCallback(
+    (_categoryName: string, _multiSelect: boolean) => {
+      // no-op
+    },
+    [],
+  );
+
+  // Empty set = no categories selected (show all)
+  const emptySelectedCategories = React.useMemo(() => new Set<string>(), []);
 
   return (
     <div className={styles.groupedNodePane}>
@@ -47,7 +53,7 @@ export const GroupedNodeListPane: React.FC<GroupedNodeListPaneProps> = ({
       </PaneHeader>
       <CategoryListView
         categories={categories}
-        selectedCategory={null}
+        selectedCategories={emptySelectedCategories}
         onCategoryClick={handleCategoryClickNoop}
         selectedIndex={selectedNodeIndex}
         onNodeSelect={onNodeSelect}

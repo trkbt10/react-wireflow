@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   height: var(--node-editor-tree-item-height);
-  padding: 0 var(--node-editor-inspector-space-sm);
+  padding: 0;
   cursor: pointer;
   user-select: none;
   transition: background-color var(--node-editor-transition-duration) ease;
@@ -175,16 +175,32 @@
   color: var(--node-editor-selected-control-text-color);
 }
 
-.dropIndicator {
+.treeItem[data-drag-over-position="before"]::before,
+.treeItem[data-drag-over-position="after"]::after {
+  content: "";
+  position: absolute;
+  left: var(--node-tree-drop-indicator-left);
+  right: 0;
   height: var(--node-editor-drop-indicator-height);
   background: var(--node-editor-accent-color);
-  margin: var(--node-editor-inspector-space-xs) 0;
   border-radius: var(--node-editor-border-radius-xxs);
   animation: dropIndicatorPulse var(--node-editor-animation-duration) ease-in-out infinite;
+  pointer-events: none;
   box-sizing: border-box;
 }
 
+.treeItem[data-drag-over-position="before"]::before {
+  top: 0;
+  transform: translateY(-50%);
+}
+
+.treeItem[data-drag-over-position="after"]::after {
+  bottom: 0;
+  transform: translateY(50%);
+}
+
 @keyframes dropIndicatorPulse {
+
   0%,
   100% {
     opacity: 1;

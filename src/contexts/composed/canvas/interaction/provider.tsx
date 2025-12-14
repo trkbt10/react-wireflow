@@ -3,6 +3,7 @@
  */
 import * as React from "react";
 import { bindActionCreators, createActionHandlerMap } from "../../../../utils/typedActions";
+import { useListenerCollection } from "../../../../hooks/useListenerCollection";
 import {
   type CanvasInteractionState,
   type CanvasInteractionAction,
@@ -178,13 +179,8 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
   });
   const stateRef = React.useRef(state);
   stateRef.current = state;
-  const subscribersRef = React.useRef(new Set<() => void>());
-  const subscribe = React.useCallback((listener: () => void) => {
-    subscribersRef.current.add(listener);
-    return () => {
-      subscribersRef.current.delete(listener);
-    };
-  }, []);
+  const storeListeners = useListenerCollection();
+  const subscribe = storeListeners.subscribe;
   const boundActions = React.useMemo(() => bindActionCreators(canvasInteractionActions, dispatch), [dispatch]);
 
   const connectionDragMeta = React.useMemo(() => {
@@ -206,7 +202,7 @@ export const CanvasInteractionProvider: React.FC<CanvasInteractionProviderProps>
   const getState = React.useCallback(() => stateRef.current, []);
 
   React.useEffect(() => {
-    subscribersRef.current.forEach((listener) => listener());
+    storeListeners.notify();
   }, [state]);
 
   // Stable actions value - only depends on dispatch which is stable

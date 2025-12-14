@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useEditorActionStateActions, useEditorActionStateState } from "../../../contexts/composed/EditorActionStateContext";
 import { useCanvasInteractionActions } from "../../../contexts/composed/canvas/interaction/context";
-import { useNodeEditor } from "../../../contexts/composed/node-editor/context";
+import { useNodeEditorApi } from "../../../contexts/composed/node-editor/context";
 import { useNodeCanvasUtils } from "../../../contexts/composed/canvas/viewport/context";
 import { useInteractionSettings } from "../../../contexts/interaction-settings/context";
 import type { PointerType } from "../../../types/interaction";
@@ -33,7 +33,7 @@ export const useNodeSelectionInteractions = (
   const actionState = useEditorActionStateState();
   const { actions: actionActions } = useEditorActionStateActions();
   const { actions: interactionActions } = useCanvasInteractionActions();
-  const { state: nodeEditorState } = useNodeEditor();
+  const { getState: getNodeEditorState } = useNodeEditorApi();
   const utils = useNodeCanvasUtils();
   const interactionSettings = useInteractionSettings();
   const matchesPointerAction = usePointerShortcutMatcher();
@@ -42,7 +42,7 @@ export const useNodeSelectionInteractions = (
   const getGroupChildren = options.getGroupChildren ?? noopGetGroupChildren;
 
   const actionStateRef = useLatestRef(actionState);
-  const nodeEditorNodesRef = useLatestRef(nodeEditorState.nodes);
+  const getNodeEditorStateRef = useLatestRef(getNodeEditorState);
   const nodeDefinitionRegistryRef = useLatestRef(nodeDefinitionRegistry);
   const nodeDefinitionListRef = useLatestRef(nodeDefinitionList);
   const getGroupChildrenRef = useLatestRef(getGroupChildren);
@@ -104,7 +104,7 @@ export const useNodeSelectionInteractions = (
         return;
       }
 
-      const nodes = nodeEditorNodesRef.current;
+      const nodes = getNodeEditorStateRef.current().nodes;
       const clickedNode = nodes[targetNodeId];
       const selectedNodeIds = actionStateRef.current.selectedNodeIds;
       const wasSelected = selectedNodeIds.includes(targetNodeId);

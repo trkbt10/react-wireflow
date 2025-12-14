@@ -14,36 +14,80 @@ export const DEFAULT_NODE_CATEGORY = "Other";
 export const CATEGORY_SEPARATOR = "/";
 
 /**
+ * Normalize category to an array of category strings.
+ * Handles both single string and array inputs.
+ */
+export const normalizeCategories = (category: string | string[] | undefined): string[] => {
+  if (category === undefined) {
+    return [DEFAULT_NODE_CATEGORY];
+  }
+  if (Array.isArray(category)) {
+    return category.length > 0 ? category : [DEFAULT_NODE_CATEGORY];
+  }
+  return [category];
+};
+
+/**
+ * Filter out categories that are prefixes of other categories in the list.
+ * This prevents a node from appearing in both a parent and child category.
+ * e.g., ["custom", "custom/ui"] -> ["custom/ui"] (custom is filtered out)
+ * e.g., ["custom/ui", "custom/hoge"] -> ["custom/ui", "custom/hoge"] (neither is a prefix of the other)
+ */
+export const filterPrefixCategories = (categories: string[]): string[] => {
+  return categories.filter((cat) => {
+    const catWithSep = cat + CATEGORY_SEPARATOR;
+    // Keep this category only if no other category starts with it as a prefix
+    return !categories.some((other) => other !== cat && other.startsWith(catWithSep));
+  });
+};
+
+/**
  * Group node definitions by category. Categories honor the lowest provided priority
  * before falling back to alphabetical ordering for the remaining groups.
+ * Supports multi-category nodes - a node with multiple categories appears in each.
+ * When categories share a parent (e.g., ["custom/ui", "custom/hoge"]), the node
+ * appears only in the specific categories, not in the shared parent.
  */
 export const groupNodeDefinitions = (nodeDefinitions: NodeDefinition[]): NodeDefinitionCategory[] => {
   const categoryMap = new Map<string, NodeDefinition[]>();
   const categoryOrder = new Map<string, number | null>();
   const categoryIcon = new Map<string, ReactNode>();
+  // Track which nodes are already added to each category to prevent duplicates
+  const categoryNodeTypes = new Map<string, Set<string>>();
 
   nodeDefinitions.forEach((definition) => {
-    const category = definition.category || DEFAULT_NODE_CATEGORY;
-    if (!categoryMap.has(category)) {
-      categoryMap.set(category, []);
-      categoryOrder.set(category, null);
-    }
+    const rawCategories = normalizeCategories(definition.category);
+    // Filter out parent categories when child categories exist
+    const categories = filterPrefixCategories(rawCategories);
 
-    categoryMap.get(category)!.push(definition);
-
-    // Update icon from categoryInfo (first one wins)
-    if (definition.categoryInfo?.icon !== undefined && !categoryIcon.has(category)) {
-      categoryIcon.set(category, definition.categoryInfo.icon);
-    }
-
-    // Update sort order (categoryInfo.priority takes precedence over definition.priority)
-    const definitionOrder = definition.categoryInfo?.priority ?? definition.priority;
-    if (typeof definitionOrder === "number" && Number.isFinite(definitionOrder)) {
-      const current = categoryOrder.get(category) ?? null;
-      if (current === null || definitionOrder < current) {
-        categoryOrder.set(category, definitionOrder);
+    categories.forEach((category) => {
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, []);
+        categoryOrder.set(category, null);
+        categoryNodeTypes.set(category, new Set());
       }
-    }
+
+      // Only add if not already present (prevent duplicates within same category)
+      const nodeTypes = categoryNodeTypes.get(category)!;
+      if (!nodeTypes.has(definition.type)) {
+        nodeTypes.add(definition.type);
+        categoryMap.get(category)!.push(definition);
+      }
+
+      // Update icon from categoryInfo (first one wins)
+      if (definition.categoryInfo?.icon !== undefined && !categoryIcon.has(category)) {
+        categoryIcon.set(category, definition.categoryInfo.icon);
+      }
+
+      // Update sort order (categoryInfo.priority takes precedence over definition.priority)
+      const definitionOrder = definition.categoryInfo?.priority ?? definition.priority;
+      if (typeof definitionOrder === "number" && Number.isFinite(definitionOrder)) {
+        const current = categoryOrder.get(category) ?? null;
+        if (current === null || definitionOrder < current) {
+          categoryOrder.set(category, definitionOrder);
+        }
+      }
+    });
   });
 
   return Array.from(categoryMap.entries())
@@ -131,11 +175,16 @@ export const parseCategoryPath = (category: string): string[] => {
 /**
  * Group node definitions into a nested hierarchy based on category paths.
  * Categories using "/" separator will be nested (e.g., "Data/Transform" creates Data -> Transform).
+ * Supports multi-category nodes - a node with multiple categories appears in each.
+ * When categories share a parent (e.g., ["custom/ui", "custom/hoge"]), the node
+ * appears only in the specific categories, not in the shared parent.
  */
 export const groupNodeDefinitionsNested = (nodeDefinitions: NodeDefinition[]): NestedNodeDefinitionCategory[] => {
   const rootMap = new Map<string, NestedNodeDefinitionCategory>();
   // Cache for quick lookup by full path
   const categoryByPath = new Map<string, NestedNodeDefinitionCategory>();
+  // Track which nodes are already added to each category path to prevent duplicates
+  const categoryNodeTypes = new Map<string, Set<string>>();
 
   const getOrCreateCategory = (segments: string[]): NestedNodeDefinitionCategory => {
     const fullPath = segments.join(CATEGORY_SEPARATOR);
@@ -159,6 +208,7 @@ export const groupNodeDefinitionsNested = (nodeDefinitions: NodeDefinition[]): N
     };
 
     categoryByPath.set(fullPath, category);
+    categoryNodeTypes.set(fullPath, new Set());
 
     if (segments.length === 1) {
       // Root level category
@@ -177,24 +227,34 @@ export const groupNodeDefinitionsNested = (nodeDefinitions: NodeDefinition[]): N
 
   // First pass: create structure and assign nodes
   nodeDefinitions.forEach((definition) => {
-    const categoryString = definition.category || DEFAULT_NODE_CATEGORY;
-    const segments = parseCategoryPath(categoryString);
-    const category = getOrCreateCategory(segments);
+    const rawCategories = normalizeCategories(definition.category);
+    // Filter out parent categories when child categories exist
+    const categories = filterPrefixCategories(rawCategories);
 
-    category.nodes.push(definition);
+    categories.forEach((categoryString) => {
+      const segments = parseCategoryPath(categoryString);
+      const category = getOrCreateCategory(segments);
 
-    // Update icon from categoryInfo (first one wins)
-    if (definition.categoryInfo?.icon !== undefined && category.icon === undefined) {
-      category.icon = definition.categoryInfo.icon;
-    }
-
-    // Update sort order (categoryInfo.priority takes precedence over definition.priority)
-    const definitionOrder = definition.categoryInfo?.priority ?? definition.priority;
-    if (typeof definitionOrder === "number" && Number.isFinite(definitionOrder)) {
-      if (category.sortOrder === null || definitionOrder < category.sortOrder) {
-        category.sortOrder = definitionOrder;
+      // Only add if not already present (prevent duplicates within same category)
+      const nodeTypes = categoryNodeTypes.get(category.path)!;
+      if (!nodeTypes.has(definition.type)) {
+        nodeTypes.add(definition.type);
+        category.nodes.push(definition);
       }
-    }
+
+      // Update icon from categoryInfo (first one wins)
+      if (definition.categoryInfo?.icon !== undefined && category.icon === undefined) {
+        category.icon = definition.categoryInfo.icon;
+      }
+
+      // Update sort order (categoryInfo.priority takes precedence over definition.priority)
+      const definitionOrder = definition.categoryInfo?.priority ?? definition.priority;
+      if (typeof definitionOrder === "number" && Number.isFinite(definitionOrder)) {
+        if (category.sortOrder === null || definitionOrder < category.sortOrder) {
+          category.sortOrder = definitionOrder;
+        }
+      }
+    });
   });
 
   // Second pass: sort nodes and calculate totals

@@ -9,6 +9,7 @@ import type { BoundActionCreators } from "../../../utils/typedActions";
 import type { Settings } from "../../../hooks/useSettings";
 import type { SettingsManager } from "../../../settings/SettingsManager";
 import type { NodeDefinition } from "../../../types/NodeDefinition";
+import { useExternalStoreSelector } from "../../../hooks/useExternalStoreSelector";
 
 export type NodeEditorUtils = {
   /**
@@ -40,11 +41,6 @@ export type NodeEditorContextValue = {
   actions: BoundActionCreators<typeof nodeEditorActions>;
   actionCreators: typeof nodeEditorActions;
   /**
-   * Nodes sorted for rendering (group nodes first).
-   * This is independent of viewport visibility.
-   */
-  sortedNodes: Node[];
-  /**
    * Set of port keys ("nodeId:portId") that are part of any connection.
    * Do not mutate.
    */
@@ -61,7 +57,6 @@ export type NodeEditorContextValue = {
   /**
    * Returns ordered ports for a node, suitable for UI rendering.
    * Preserves definition order and applies node-specific overrides.
-   * Note: For random access by (nodeId, portId) in hot paths, prefer `portLookupMap`.
    */
   getNodePorts: (nodeId: NodeId) => Port[];
   /**
@@ -69,12 +64,6 @@ export type NodeEditorContextValue = {
    * Useful for event handlers that need fresh data before React commits a render.
    */
   getNodeById: (nodeId: NodeId) => Node | undefined;
-  /**
-   * O(1) lookup map for ports. Key format: "nodeId:portId".
-   * Recomputed when nodes/definitions change. Do not mutate.
-   * Use this for frequent single-port lookups (connections, hit tests, drags).
-   */
-  portLookupMap: Map<string, { node: Node; port: Port }>;
   settings: Settings;
   settingsManager?: SettingsManager;
   updateSetting: (key: string, value: unknown) => void;
@@ -88,11 +77,35 @@ export type NodeEditorContextValue = {
 export const NodeEditorContext = React.createContext<NodeEditorContextValue | null>(null);
 NodeEditorContext.displayName = "NodeEditorContext";
 
+export type NodeEditorStateChange = {
+  action: NodeEditorAction;
+  /** Node ids whose data/geometry/type may have changed */
+  changedNodeIds: readonly NodeId[];
+  /** Node ids removed from the graph */
+  removedNodeIds: readonly NodeId[];
+  /** True when consumers should recompute from scratch */
+  fullResync: boolean;
+  /** True when viewport visibility / geometry-dependent consumers should update */
+  affectsGeometry: boolean;
+  /** True when port structure/positions for changed nodes may have changed */
+  affectsPorts: boolean;
+  /** True when node ordering for rendering may have changed */
+  affectsNodeOrder: boolean;
+  /** True when connection-derived caches should update */
+  affectsConnections: boolean;
+};
+
 export type NodeEditorApiValue = {
   dispatch: React.Dispatch<NodeEditorAction>;
   actions: BoundActionCreators<typeof nodeEditorActions>;
   getState: () => NodeEditorData;
   subscribe: (listener: () => void) => () => void;
+  subscribeToChanges: (listener: (change: NodeEditorStateChange) => void) => () => void;
+  getSortedNodeIds: () => NodeId[];
+  subscribeToSortedNodeIds: (listener: () => void) => () => void;
+  getConnectedPorts: () => Set<string>;
+  getConnectedPortIdsByNode: () => ReadonlyMap<NodeId, ReadonlySet<string>>;
+  subscribeToConnectionDerived: (listener: () => void) => () => void;
   getNodePorts: (nodeId: NodeId) => Port[];
   getNodeById: (nodeId: NodeId) => Node | undefined;
 };
@@ -125,20 +138,34 @@ export function useNodeEditorSelector<T>(
   options?: { areEqual?: (a: T, b: T) => boolean },
 ): T {
   const { subscribe, getState } = useNodeEditorApi();
-  const previousRef = React.useRef<T | null>(null);
+  return useExternalStoreSelector(subscribe, getState, selector, options);
+}
 
-  const getSnapshot = React.useCallback((): T => {
-    const next = selector(getState());
-    const previous = previousRef.current;
-    const areEqual = options?.areEqual;
-    if (previous !== null && areEqual && areEqual(previous, next)) {
-      return previous;
-    }
-    previousRef.current = next;
-    return next;
-  }, [getState, selector, options?.areEqual]);
+/**
+ * Subscribe to the stable, rendering-order node id list.
+ * This list only updates when node ordering changes (e.g. add/remove/type change).
+ */
+export function useNodeEditorSortedNodeIds(): NodeId[] {
+  const { subscribeToSortedNodeIds, getSortedNodeIds } = useNodeEditorApi();
+  return useExternalStoreSelector(subscribeToSortedNodeIds, getSortedNodeIds, (ids) => ids);
+}
 
-  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+/**
+ * Subscribe to the derived connected port-key Set ("nodeId:portId").
+ * Updates only when connections change.
+ */
+export function useNodeEditorConnectedPorts(): Set<string> {
+  const { subscribeToConnectionDerived, getConnectedPorts } = useNodeEditorApi();
+  return useExternalStoreSelector(subscribeToConnectionDerived, getConnectedPorts, (ports) => ports);
+}
+
+/**
+ * Subscribe to per-node connected port id Sets (portId-only, keyed by nodeId).
+ * Updates only when connections change.
+ */
+export function useNodeEditorConnectedPortIdsByNode(): ReadonlyMap<NodeId, ReadonlySet<string>> {
+  const { subscribeToConnectionDerived, getConnectedPortIdsByNode } = useNodeEditorApi();
+  return useExternalStoreSelector(subscribeToConnectionDerived, getConnectedPortIdsByNode, (map) => map);
 }
 
 export const useNodeEditorActions = () => {
