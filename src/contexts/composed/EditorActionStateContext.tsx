@@ -296,6 +296,14 @@ export type NodeOperations = {
     nodeType: string,
     screenPosition: Position,
   ) => void;
+  /**
+   * Create a node from a canvas drop (already in canvas coordinates).
+   * Handles type limit checking and node creation.
+   */
+  createNodeFromCanvasDrop: (
+    nodeType: string,
+    canvasPosition: Position,
+  ) => void;
 };
 
 // Context types
@@ -456,12 +464,8 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
 
       // Use canvas position from context menu state (preferred)
       // If not available, use canvas utils to convert screen coordinates
-      let canvasPosition = state.contextMenu.canvasPosition;
-
-      if (!canvasPosition) {
-        // Convert screen coordinates to canvas coordinates using canvas utils
-        canvasPosition = canvasUtils.screenToCanvas(screenPosition.x, screenPosition.y);
-      }
+      const canvasPosition =
+        state.contextMenu.canvasPosition ?? canvasUtils.screenToCanvas(screenPosition.x, screenPosition.y);
 
       // Enforce per-flow maximums if defined
       const counts = countNodesByType(editorState);
@@ -522,6 +526,25 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
     ],
   );
 
+  const createNodeFromCanvasDrop = React.useCallback(
+    (nodeType: string, canvasPosition: Position) => {
+      const nodeDefinition = nodeDefinitions.find((def) => def.type === nodeType);
+      if (!nodeDefinition) {
+        console.warn(`Node definition not found for type: ${nodeType}`);
+        return;
+      }
+
+      const counts = countNodesByType(editorState);
+      if (!canAddNodeType(nodeType, nodeDefinitions, counts)) {
+        return;
+      }
+
+      const newNode = buildNodeFromDefinition({ nodeDefinition, canvasPosition });
+      editorActions.addNodeWithId(newNode);
+    },
+    [nodeDefinitions, editorActions, editorState],
+  );
+
   const nodeOperations = React.useMemo<NodeOperations>(
     () => ({
       duplicateNodes,
@@ -530,8 +553,9 @@ export const EditorActionStateProvider: React.FC<EditorActionStateProviderProps>
       cutNodes,
       pasteNodes,
       createNodeFromContextMenu,
+      createNodeFromCanvasDrop,
     }),
-    [duplicateNodes, deleteNodes, copyNodes, cutNodes, pasteNodes, createNodeFromContextMenu],
+    [duplicateNodes, deleteNodes, copyNodes, cutNodes, pasteNodes, createNodeFromContextMenu, createNodeFromCanvasDrop],
   );
 
   // Stable actions value - only depends on dispatch which is stable

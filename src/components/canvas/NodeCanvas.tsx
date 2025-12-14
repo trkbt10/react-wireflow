@@ -6,10 +6,8 @@ import { CanvasBase, type CanvasNodeDropEvent } from "./CanvasBase";
 import { ConnectionLayer } from "../connection/ConnectionLayer";
 import { NodeLayer } from "../node/layer/NodeLayer";
 import { useNodeEditor } from "../../contexts/composed/node-editor/context";
-import { useNodeDefinitionList } from "../../contexts/node-definitions/hooks/useNodeDefinitionList";
-import { buildNodeFromDefinition } from "../../contexts/composed/node-editor/utils/nodeFactory";
-import { canAddNodeType, countNodesByType } from "../../contexts/node-definitions/utils/nodeTypeLimits";
 import { CanvasPointerActionProvider } from "../../contexts/composed/canvas/pointer-action-provider";
+import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
 
 export type NodeCanvasProps = {
   showGrid?: boolean;
@@ -25,29 +23,17 @@ export const NodeCanvas: React.FC<NodeCanvasProps> = ({
   showGrid: showGridProp,
   doubleClickToEdit: doubleClickToEditProp,
 }) => {
-  const { settings, state, actions } = useNodeEditor();
-  const nodeDefinitions = useNodeDefinitionList();
+  const { settings } = useNodeEditor();
+  const { nodeOperations } = useEditorActionState();
 
   const showGrid = showGridProp ?? settings.showGrid;
   const doubleClickToEdit = doubleClickToEditProp ?? settings.doubleClickToEdit;
 
-  const nodeTypeCounts = React.useMemo(() => countNodesByType(state), [state]);
-
   const handleNodeDrop = React.useCallback(
     (event: CanvasNodeDropEvent) => {
-      const nodeDefinition = nodeDefinitions.find((definition) => definition.type === event.nodeType);
-      if (!nodeDefinition) {
-        return;
-      }
-
-      if (!canAddNodeType(event.nodeType, nodeDefinitions, nodeTypeCounts)) {
-        return;
-      }
-
-      const newNode = buildNodeFromDefinition({ nodeDefinition, canvasPosition: event.canvasPosition });
-      actions.addNodeWithId(newNode);
+      nodeOperations.createNodeFromCanvasDrop(event.nodeType, event.canvasPosition);
     },
-    [actions, nodeDefinitions, nodeTypeCounts],
+    [nodeOperations],
   );
 
   return (

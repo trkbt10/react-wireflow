@@ -5,7 +5,7 @@ import * as React from "react";
 import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
 import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
 import { applyZoomDelta } from "../../utils/zoomUtils";
-import { SelectionOverlay } from "./SelectionOverlay";
+import { SelectionBox } from "./SelectionBox";
 import styles from "./CanvasBase.module.css";
 import { useInteractionSettings } from "../../contexts/interaction-settings/context";
 import type { PointerType } from "../../types/interaction";
@@ -37,7 +37,7 @@ const hasNodePayload = (event: React.DragEvent): boolean => {
  * This component receives events and provides visual support with grid display
  * Does not trap events unless necessary for its own operations
  */
-export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onNodeDrop }) => {
+export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, showGrid, onNodeDrop }) => {
   const { state: canvasState, actions: canvasActions, canvasRef, utils, setContainerElement } = useNodeCanvas();
   const { actions: actionActions } = useEditorActionState();
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -52,6 +52,8 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
     return () => setContainerElement(null);
   }, [setContainerElement]);
 
+  const shouldShowGrid = showGrid ?? canvasState.gridSettings.showGrid;
+
   // Canvas transform based on viewport - optimized string creation
   const canvasTransform = React.useMemo(() => {
     const { offset, scale } = canvasState.viewport;
@@ -60,7 +62,7 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
 
   // Grid pattern with offset - optimized dependencies
   const gridPatternDefs = React.useMemo(() => {
-    if (!canvasState.gridSettings.showGrid) {
+    if (!shouldShowGrid) {
       return null;
     }
 
@@ -84,25 +86,11 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
         </pattern>
       </defs>
     );
-  }, [canvasState.gridSettings, canvasState.viewport, gridPatternId]);
+  }, [canvasState.gridSettings, canvasState.viewport, gridPatternId, shouldShowGrid]);
 
   const gridPatternFill = React.useMemo(() => `url(#${gridPatternId})`, [gridPatternId]);
 
-  const handleDragEnter = React.useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      if (!onNodeDrop) {
-        return;
-      }
-      if (!hasNodePayload(event)) {
-        return;
-      }
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-    },
-    [onNodeDrop],
-  );
-
-  const handleDragOver = React.useCallback(
+  const handleNodeDragOver = React.useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       if (!onNodeDrop) {
         return;
@@ -310,8 +298,8 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
       onPointerCancel={pointerHandlers.onPointerCancel}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
+      onDragEnter={handleNodeDragOver}
+      onDragOver={handleNodeDragOver}
       onDrop={handleDrop}
       role="application"
       aria-label="Node Editor Canvas"
@@ -320,7 +308,7 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
       data-is-box-selecting={isBoxSelecting}
     >
       {/* Grid background */}
-      {canvasState.gridSettings.showGrid && (
+      {shouldShowGrid && (
         <svg className={styles.gridSvg}>
           {gridPatternDefs}
           <rect width="100%" height="100%" fill={gridPatternFill} />
@@ -333,7 +321,9 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, onN
       </div>
 
       {/* Selection overlay (in screen coordinates, passes through events) */}
-      <SelectionOverlay />
+      <div className={styles.selectionOverlay}>
+        <SelectionBox />
+      </div>
     </div>
   );
 };
