@@ -25,6 +25,7 @@ import { useNodeSelectionInteractions } from "../hooks/useNodeSelectionInteracti
 import { useNodeCanvasGridSettings } from "../../../contexts/composed/canvas/viewport/context";
 import { EMPTY_CONNECTABLE_PORTS, isConnectablePortsEmpty } from "../../../core/port/connectivity/connectableTypes";
 import { parsePortKey } from "../../../core/port/identity/key";
+import { useStableCallback } from "../../../hooks/useStableCallback";
 
 export type NodeLayerProps = {
   doubleClickToEdit?: boolean;
@@ -67,18 +68,8 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   const { handleNodePointerDown, handleNodeContextMenu } = useNodeSelectionInteractions({
     getGroupChildren: groupManager.getGroupChildren,
   });
-
-  const handleNodePointerDownRef = React.useRef(handleNodePointerDown);
-  handleNodePointerDownRef.current = handleNodePointerDown;
-  const onNodePointerDown = React.useCallback((...args: Parameters<typeof handleNodePointerDown>) => {
-    return handleNodePointerDownRef.current(...args);
-  }, []);
-
-  const handleNodeContextMenuRef = React.useRef(handleNodeContextMenu);
-  handleNodeContextMenuRef.current = handleNodeContextMenu;
-  const onNodeContextMenu = React.useCallback((...args: Parameters<typeof handleNodeContextMenu>) => {
-    return handleNodeContextMenuRef.current(...args);
-  }, []);
+  const onNodePointerDown = useStableCallback(handleNodePointerDown);
+  const onNodeContextMenu = useStableCallback(handleNodeContextMenu);
 
   // Port event handlers
   const {
@@ -89,42 +80,12 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
     handlePortPointerLeave,
     handlePortPointerCancel,
   } = useNodeLayerPorts();
-
-  const handlePortPointerDownRef = React.useRef(handlePortPointerDown);
-  handlePortPointerDownRef.current = handlePortPointerDown;
-  const onPortPointerDown = React.useCallback((...args: Parameters<typeof handlePortPointerDown>) => {
-    return handlePortPointerDownRef.current(...args);
-  }, []);
-
-  const handlePortPointerUpRef = React.useRef(handlePortPointerUp);
-  handlePortPointerUpRef.current = handlePortPointerUp;
-  const onPortPointerUp = React.useCallback((...args: Parameters<typeof handlePortPointerUp>) => {
-    return handlePortPointerUpRef.current(...args);
-  }, []);
-
-  const handlePortPointerEnterRef = React.useRef(handlePortPointerEnter);
-  handlePortPointerEnterRef.current = handlePortPointerEnter;
-  const onPortPointerEnter = React.useCallback((...args: Parameters<typeof handlePortPointerEnter>) => {
-    return handlePortPointerEnterRef.current(...args);
-  }, []);
-
-  const handlePortPointerMoveRef = React.useRef(handlePortPointerMove);
-  handlePortPointerMoveRef.current = handlePortPointerMove;
-  const onPortPointerMove = React.useCallback((...args: Parameters<typeof handlePortPointerMove>) => {
-    return handlePortPointerMoveRef.current(...args);
-  }, []);
-
-  const handlePortPointerLeaveRef = React.useRef(handlePortPointerLeave);
-  handlePortPointerLeaveRef.current = handlePortPointerLeave;
-  const onPortPointerLeave = React.useCallback((...args: Parameters<typeof handlePortPointerLeave>) => {
-    return handlePortPointerLeaveRef.current(...args);
-  }, []);
-
-  const handlePortPointerCancelRef = React.useRef(handlePortPointerCancel);
-  handlePortPointerCancelRef.current = handlePortPointerCancel;
-  const onPortPointerCancel = React.useCallback((...args: Parameters<typeof handlePortPointerCancel>) => {
-    return handlePortPointerCancelRef.current(...args);
-  }, []);
+  const onPortPointerDown = useStableCallback(handlePortPointerDown);
+  const onPortPointerUp = useStableCallback(handlePortPointerUp);
+  const onPortPointerEnter = useStableCallback(handlePortPointerEnter);
+  const onPortPointerMove = useStableCallback(handlePortPointerMove);
+  const onPortPointerLeave = useStableCallback(handlePortPointerLeave);
+  const onPortPointerCancel = useStableCallback(handlePortPointerCancel);
 
   useNodeLayerDrag(groupManager.moveGroupWithChildren);
 

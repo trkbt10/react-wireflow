@@ -13,6 +13,7 @@ import {
 } from "../../../core/port/connectivity/connectionPlanning";
 import type { Port } from "../../../types/core";
 import { EMPTY_CONNECTABLE_PORTS } from "../../../core/port/connectivity/connectableTypes";
+import { useLatestRef } from "../../../hooks/useLatestRef";
 
 export const useConnectionOperations = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
@@ -20,21 +21,13 @@ export const useConnectionOperations = () => {
   const { state: nodeEditorState, actions: nodeEditorActions, getNodePorts } = useNodeEditor();
   const { registry } = useNodeDefinitions();
 
-  const getInteractionStateRef = React.useRef(getInteractionState);
-  const nodeEditorStateRef = React.useRef(nodeEditorState);
-  const nodeEditorActionsRef = React.useRef(nodeEditorActions);
-  const getNodePortsRef = React.useRef(getNodePorts);
-  const registryRef = React.useRef(registry);
-  const interactionActionsRef = React.useRef(interactionActions);
-  const actionActionsRef = React.useRef(actionActions);
-
-  getInteractionStateRef.current = getInteractionState;
-  nodeEditorStateRef.current = nodeEditorState;
-  nodeEditorActionsRef.current = nodeEditorActions;
-  getNodePortsRef.current = getNodePorts;
-  registryRef.current = registry;
-  interactionActionsRef.current = interactionActions;
-  actionActionsRef.current = actionActions;
+  const getInteractionStateRef = useLatestRef(getInteractionState);
+  const nodeEditorStateRef = useLatestRef(nodeEditorState);
+  const nodeEditorActionsRef = useLatestRef(nodeEditorActions);
+  const getNodePortsRef = useLatestRef(getNodePorts);
+  const registryRef = useLatestRef(registry);
+  const interactionActionsRef = useLatestRef(interactionActions);
+  const actionActionsRef = useLatestRef(actionActions);
 
   const completeDisconnectDrag = React.useCallback(
     (targetPort: Port): boolean => {

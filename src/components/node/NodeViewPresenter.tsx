@@ -111,6 +111,9 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
   candidatePortId,
 }) => {
   const nodeRef = React.useRef<HTMLDivElement>(null);
+  const lastTransformRef = React.useRef<Position | null>(null);
+  const lastBasePositionRef = React.useRef<Position | null>(null);
+  const wasDraggingRef = React.useRef(false);
 
   const basePosition = React.useMemo(
     () => ({
@@ -125,10 +128,28 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
       return;
     }
 
-    const transformX = resizeState.currentPosition?.x ?? (basePosition.x + (dragOffset?.x ?? 0));
-    const transformY = resizeState.currentPosition?.y ?? (basePosition.y + (dragOffset?.y ?? 0));
+    const desiredX = resizeState.currentPosition?.x ?? (basePosition.x + (dragOffset?.x ?? 0));
+    const desiredY = resizeState.currentPosition?.y ?? (basePosition.y + (dragOffset?.y ?? 0));
+
+    const lastTransform = lastTransformRef.current;
+    const lastBasePosition = lastBasePositionRef.current;
+    const shouldHoldDragPosition =
+      !resizeState.currentPosition &&
+      typeof dragOffset === "undefined" &&
+      wasDraggingRef.current &&
+      !!lastTransform &&
+      !!lastBasePosition &&
+      lastBasePosition.x === basePosition.x &&
+      lastBasePosition.y === basePosition.y;
+
+    const transformX = shouldHoldDragPosition && lastTransform ? lastTransform.x : desiredX;
+    const transformY = shouldHoldDragPosition && lastTransform ? lastTransform.y : desiredY;
 
     nodeRef.current.style.transform = `translate(${transformX}px, ${transformY}px)`;
+
+    lastTransformRef.current = { x: transformX, y: transformY };
+    lastBasePositionRef.current = basePosition;
+    wasDraggingRef.current = typeof dragOffset !== "undefined";
   }, [basePosition, dragOffset, resizeState.currentPosition]);
 
   const handleNodePointerDown = React.useCallback(

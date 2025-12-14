@@ -12,6 +12,7 @@ import { calculateNewPositions, handleGroupMovement } from "../../../contexts/co
 import type { UseGroupManagementResult } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { useRafThrottledCallback } from "../../../hooks/useRafThrottledCallback";
 import type { DragState, Position } from "../../../types/core";
+import { useLatestRef } from "../../../hooks/useLatestRef";
 
 export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult["moveGroupWithChildren"]) => {
   const dragState = useCanvasInteractionDragState();
@@ -21,32 +22,21 @@ export const useNodeLayerDrag = (moveGroupWithChildren: UseGroupManagementResult
   const gridSettings = useNodeCanvasGridSettings();
   const nodeDefinitions = useNodeDefinitionList();
 
-  const dragStateRef = React.useRef<DragState | null>(dragState);
-  const viewportScaleRef = React.useRef(viewportScale);
-  const gridSettingsRef = React.useRef(gridSettings);
-  const nodeEditorNodesRef = React.useRef(nodeEditorState.nodes);
-  const nodeDefinitionsRef = React.useRef(nodeDefinitions);
-  const moveGroupWithChildrenRef = React.useRef(moveGroupWithChildren);
-  const nodeEditorActionsRef = React.useRef(nodeEditorActions);
-  const interactionActionsRef = React.useRef(interactionActions);
-
-  dragStateRef.current = dragState;
-  viewportScaleRef.current = viewportScale;
-  gridSettingsRef.current = gridSettings;
-  nodeEditorNodesRef.current = nodeEditorState.nodes;
-  nodeDefinitionsRef.current = nodeDefinitions;
-  moveGroupWithChildrenRef.current = moveGroupWithChildren;
-  nodeEditorActionsRef.current = nodeEditorActions;
-  interactionActionsRef.current = interactionActions;
+  const dragStateRef = useLatestRef<DragState | null>(dragState);
+  const viewportScaleRef = useLatestRef(viewportScale);
+  const gridSettingsRef = useLatestRef(gridSettings);
+  const nodeEditorNodesRef = useLatestRef(nodeEditorState.nodes);
+  const nodeDefinitionsRef = useLatestRef(nodeDefinitions);
+  const moveGroupWithChildrenRef = useLatestRef(moveGroupWithChildren);
+  const nodeEditorActionsRef = useLatestRef(nodeEditorActions);
+  const interactionActionsRef = useLatestRef(interactionActions);
 
   const updateDragOffset = React.useCallback((offset: Position) => {
     interactionActionsRef.current.updateNodeDrag(offset);
   }, []);
   const { schedule: scheduleDragOffset, cancel: cancelDragOffset } = useRafThrottledCallback(updateDragOffset);
-  const scheduleDragOffsetRef = React.useRef(scheduleDragOffset);
-  const cancelDragOffsetRef = React.useRef(cancelDragOffset);
-  scheduleDragOffsetRef.current = scheduleDragOffset;
-  cancelDragOffsetRef.current = cancelDragOffset;
+  const scheduleDragOffsetRef = useLatestRef(scheduleDragOffset);
+  const cancelDragOffsetRef = useLatestRef(cancelDragOffset);
 
   const handlePointerMove = React.useCallback((event: PointerEvent) => {
     const dragState = dragStateRef.current;

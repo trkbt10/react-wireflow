@@ -19,6 +19,7 @@ import {
 } from "three";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry.js";
 import { DEFAULT_MATERIAL_CONFIG, type MaterialConfig } from "./materialConfig";
+import { consumeResizeRequest, createResizeQueueState, requestResize } from "./resizeQueue";
 
 /**
  * Encapsulated Three.js scene with rotating geometry.
@@ -161,6 +162,8 @@ export const ThreeSceneCanvas: React.FC<ThreeSceneCanvasProps> = ({
   const animationFrameRef = React.useRef<number | null>(null);
   const sceneRef = React.useRef<SceneRefs | null>(null);
   const materialMode = materialConfig?.mode ?? "standard";
+  const resizeQueueRef = React.useRef(createResizeQueueState());
+  const appliedSizeRef = React.useRef<{ width: number; height: number } | null>(null);
 
   React.useEffect(() => {
     const host = containerRef.current;
@@ -202,10 +205,24 @@ export const ThreeSceneCanvas: React.FC<ThreeSceneCanvasProps> = ({
     fillLight.position.set(-2.5, -1.5, -3.5);
     scene.add(fillLight);
 
+    appliedSizeRef.current = { width: host.clientWidth, height: host.clientHeight };
+
     const renderScene = (time: number) => {
       mesh.rotation.y += 0.01;
       mesh.rotation.x += 0.005;
       animateMaterial(material, time);
+      const applied = appliedSizeRef.current;
+      if (applied) {
+        const requested = consumeResizeRequest(resizeQueueRef.current, applied);
+        if (requested) {
+          const nextWidth = Math.max(requested.width, 1);
+          const nextHeight = Math.max(requested.height, 1);
+          renderer.setSize(nextWidth, nextHeight);
+          camera.aspect = nextWidth / nextHeight;
+          camera.updateProjectionMatrix();
+          appliedSizeRef.current = { width: nextWidth, height: nextHeight };
+        }
+      }
       renderer.render(scene, camera);
       animationFrameRef.current = requestAnimationFrame(renderScene);
     };
@@ -215,12 +232,9 @@ export const ThreeSceneCanvas: React.FC<ThreeSceneCanvasProps> = ({
       if (!sceneRef.current) {
         return;
       }
-      const { renderer: activeRenderer, camera: activeCamera } = sceneRef.current;
       const width = host.clientWidth;
       const height = host.clientHeight || 1;
-      activeRenderer.setSize(width, height);
-      activeCamera.aspect = width / height;
-      activeCamera.updateProjectionMatrix();
+      requestResize(resizeQueueRef.current, { width, height });
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
@@ -296,11 +310,7 @@ export const ThreeSceneCanvas: React.FC<ThreeSceneCanvasProps> = ({
 
     const effectiveWidth = width ?? containerRef.current.clientWidth;
     const effectiveHeight = height ?? (containerRef.current.clientHeight || 1);
-
-    const { renderer: activeRenderer, camera: activeCamera } = sceneRef.current;
-    activeRenderer.setSize(effectiveWidth, effectiveHeight);
-    activeCamera.aspect = effectiveWidth / effectiveHeight;
-    activeCamera.updateProjectionMatrix();
+    requestResize(resizeQueueRef.current, { width: effectiveWidth, height: effectiveHeight });
   }, [width, height]);
 
   React.useEffect(() => {

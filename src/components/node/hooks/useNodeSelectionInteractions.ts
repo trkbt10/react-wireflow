@@ -14,6 +14,7 @@ import { useNodeDefinitionList } from "../../../contexts/node-definitions/hooks/
 import type { UseGroupManagementResult } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { addUniqueIds } from "../../../utils/selectionUtils";
 import { getNodesToDrag, collectInitialPositions } from "../../../contexts/composed/node-editor/utils/nodeDragHelpers";
+import { useLatestRef } from "../../../hooks/useLatestRef";
 
 export type NodeSelectionHandlers = {
   handleNodePointerDown: (event: React.PointerEvent, nodeId: string, isDragAllowed?: boolean) => void;
@@ -40,26 +41,16 @@ export const useNodeSelectionInteractions = (
   const nodeDefinitionList = useNodeDefinitionList();
   const getGroupChildren = options.getGroupChildren ?? noopGetGroupChildren;
 
-  const actionStateRef = React.useRef(actionState);
-  actionStateRef.current = actionState;
-  const nodeEditorNodesRef = React.useRef(nodeEditorState.nodes);
-  nodeEditorNodesRef.current = nodeEditorState.nodes;
-  const nodeDefinitionRegistryRef = React.useRef(nodeDefinitionRegistry);
-  nodeDefinitionRegistryRef.current = nodeDefinitionRegistry;
-  const nodeDefinitionListRef = React.useRef(nodeDefinitionList);
-  nodeDefinitionListRef.current = nodeDefinitionList;
-  const getGroupChildrenRef = React.useRef(getGroupChildren);
-  getGroupChildrenRef.current = getGroupChildren;
-  const actionActionsRef = React.useRef(actionActions);
-  actionActionsRef.current = actionActions;
-  const interactionActionsRef = React.useRef(interactionActions);
-  interactionActionsRef.current = interactionActions;
-  const utilsRef = React.useRef(utils);
-  utilsRef.current = utils;
-  const matchesPointerActionRef = React.useRef(matchesPointerAction);
-  matchesPointerActionRef.current = matchesPointerAction;
-  const contextMenuHandlerRef = React.useRef(interactionSettings.contextMenu.handleRequest);
-  contextMenuHandlerRef.current = interactionSettings.contextMenu.handleRequest;
+  const actionStateRef = useLatestRef(actionState);
+  const nodeEditorNodesRef = useLatestRef(nodeEditorState.nodes);
+  const nodeDefinitionRegistryRef = useLatestRef(nodeDefinitionRegistry);
+  const nodeDefinitionListRef = useLatestRef(nodeDefinitionList);
+  const getGroupChildrenRef = useLatestRef(getGroupChildren);
+  const actionActionsRef = useLatestRef(actionActions);
+  const interactionActionsRef = useLatestRef(interactionActions);
+  const utilsRef = useLatestRef(utils);
+  const matchesPointerActionRef = useLatestRef(matchesPointerAction);
+  const contextMenuHandlerRef = useLatestRef(interactionSettings.contextMenu.handleRequest);
 
   const handleNodeContextMenu = React.useEffectEvent((event: React.MouseEvent, nodeId: string) => {
     const nativeEvent = event.nativeEvent as MouseEvent & { pointerType?: string };

@@ -19,6 +19,7 @@ import type { Port, Position } from "../../../types/core";
 import { computeConnectablePortIds } from "../../../core/port/connectivity/planner";
 import { findNearestConnectablePort } from "../../../core/port/connectivity/candidate";
 import { usePortPositions } from "../../../contexts/node-ports/context";
+import { useLatestRef } from "../../../hooks/useLatestRef";
 
 export const useNodeLayerConnections = () => {
   const { state: _actionState, actions: actionActions } = useEditorActionState();
@@ -34,39 +35,22 @@ export const useNodeLayerConnections = () => {
   const { getPortPosition, computePortPosition } = usePortPositions();
 
   // Connection drag handling
-  const resolveCandidatePortRef = React.useRef(resolveCandidatePort);
-  const resolveDisconnectCandidateRef = React.useRef(resolveDisconnectCandidate);
-  const interactionActionsRef = React.useRef(interactionActions);
-  const getInteractionStateRef = React.useRef(getInteractionState);
-  const completeConnectionDragRef = React.useRef(completeConnectionDrag);
-  const completeDisconnectDragRef = React.useRef(completeDisconnectDrag);
-  const endConnectionDragRef = React.useRef(endConnectionDrag);
-  const endConnectionDisconnectRef = React.useRef(endConnectionDisconnect);
-  const actionActionsRef = React.useRef(actionActions);
-  const nodeEditorStateRef = React.useRef(nodeEditorState);
-  const getNodeEditorStateRef = React.useRef(getNodeEditorState);
-  const getNodePortsRef = React.useRef(getNodePorts);
-  const utilsRef = React.useRef(utils);
-  const registryRef = React.useRef(registry);
-  const getPortPositionRef = React.useRef(getPortPosition);
-  const computePortPositionRef = React.useRef(computePortPosition);
-
-  resolveCandidatePortRef.current = resolveCandidatePort;
-  resolveDisconnectCandidateRef.current = resolveDisconnectCandidate;
-  interactionActionsRef.current = interactionActions;
-  getInteractionStateRef.current = getInteractionState;
-  completeConnectionDragRef.current = completeConnectionDrag;
-  completeDisconnectDragRef.current = completeDisconnectDrag;
-  endConnectionDragRef.current = endConnectionDrag;
-  endConnectionDisconnectRef.current = endConnectionDisconnect;
-  actionActionsRef.current = actionActions;
-  nodeEditorStateRef.current = nodeEditorState;
-  getNodeEditorStateRef.current = getNodeEditorState;
-  getNodePortsRef.current = getNodePorts;
-  utilsRef.current = utils;
-  registryRef.current = registry;
-  getPortPositionRef.current = getPortPosition;
-  computePortPositionRef.current = computePortPosition;
+  const resolveCandidatePortRef = useLatestRef(resolveCandidatePort);
+  const resolveDisconnectCandidateRef = useLatestRef(resolveDisconnectCandidate);
+  const interactionActionsRef = useLatestRef(interactionActions);
+  const getInteractionStateRef = useLatestRef(getInteractionState);
+  const completeConnectionDragRef = useLatestRef(completeConnectionDrag);
+  const completeDisconnectDragRef = useLatestRef(completeDisconnectDrag);
+  const endConnectionDragRef = useLatestRef(endConnectionDrag);
+  const endConnectionDisconnectRef = useLatestRef(endConnectionDisconnect);
+  const actionActionsRef = useLatestRef(actionActions);
+  const nodeEditorStateRef = useLatestRef(nodeEditorState);
+  const getNodeEditorStateRef = useLatestRef(getNodeEditorState);
+  const getNodePortsRef = useLatestRef(getNodePorts);
+  const utilsRef = useLatestRef(utils);
+  const registryRef = useLatestRef(registry);
+  const getPortPositionRef = useLatestRef(getPortPosition);
+  const computePortPositionRef = useLatestRef(computePortPosition);
 
   const resolveConnectionPoint = React.useCallback((nodeId: string, portId: string) => {
     const stored = getPortPositionRef.current(nodeId, portId);

@@ -49,6 +49,17 @@
   cursor: grabbing;
 }
 
+/* Hint the browser during continuous transforms. */
+.nodeView[data-dragging="true"],
+.nodeView[data-resizing="true"] {
+  will-change: transform;
+}
+
+/* Resizing changes both geometry and position (for west/north handles). */
+.nodeView[data-resizing="true"] {
+  will-change: transform, width, height;
+}
+
 .nodeView[data-is-group="true"] {
   /* Subdued, token-driven appearance */
   background-color: var(--node-editor-group-node-background,

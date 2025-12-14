@@ -18,6 +18,7 @@ import type { Port, ConnectionDisconnectState } from "../../../types/core";
 import { useConnectionPortResolvers } from "../../../contexts/node-ports/hooks/useConnectionPortResolvers";
 import { useConnectionOperations } from "../../../contexts/node-ports/hooks/useConnectionOperations";
 import { EMPTY_CONNECTABLE_PORTS } from "../../../core/port/connectivity/connectableTypes";
+import { useLatestRef } from "../../../hooks/useLatestRef";
 
 export const useNodeLayerPorts = () => {
   const { actions: actionActions } = useEditorActionStateActions();
@@ -32,10 +33,8 @@ export const useNodeLayerPorts = () => {
     useConnectionOperations();
 
   const portDragStartRef = React.useRef<{ x: number; y: number; port: Port; hasConnection: boolean } | null>(null);
-  const getInteractionStateRef = React.useRef(getInteractionState);
-  getInteractionStateRef.current = getInteractionState;
-  const getNodeEditorStateRef = React.useRef(getNodeEditorState);
-  getNodeEditorStateRef.current = getNodeEditorState;
+  const getInteractionStateRef = useLatestRef(getInteractionState);
+  const getNodeEditorStateRef = useLatestRef(getNodeEditorState);
   const lastHoveredPortIdRef = React.useRef<string | null>(null);
 
   const handlePortPointerDown = React.useEffectEvent((event: React.PointerEvent, port: Port) => {

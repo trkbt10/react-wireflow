@@ -245,6 +245,11 @@ export const NodeBodyRenderer = React.memo(NodeBodyRendererComponent, (prevProps
     const prevCustom = prevProps.customRenderProps;
     const nextCustom = nextProps.customRenderProps;
 
+    if (prevCustom.node !== nextCustom.node) {
+      debugLog("customRenderProps.node changed");
+      return false;
+    }
+
     if (prevCustom.isDragging !== nextCustom.isDragging) {
       debugLog("customRenderProps.isDragging changed", {
         prev: prevCustom.isDragging,
