@@ -1,13 +1,19 @@
 /* Selection Box Overlay */
 .selectionBoxOverlay {
   position: absolute;
-  border: 2px solid var(--node-editor-accent-color, #0066cc);
-  background-color: rgba(0, 102, 204, 0.15);
-  border-radius: 2px;
+  border: calc(var(--node-editor-border-width, 1px) * 2) solid
+    var(--node-editor-accent-color, #0066cc);
+  background-color: color-mix(
+    in srgb,
+    var(--node-editor-accent-color, #0066cc) 15%,
+    transparent
+  );
+  border-radius: calc(var(--node-editor-border-radius-xxs, 1px) * 2);
   pointer-events: none;
-  z-index: 1000;
+  z-index: var(--node-editor-dialog-level-elevation, 1000);
   box-sizing: border-box;
   min-width: 1px;
   min-height: 1px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 var(--node-editor-border-width, 1px)
+    var(--node-editor-selected-secondary-color, rgba(255, 255, 255, 0.8));
 }
