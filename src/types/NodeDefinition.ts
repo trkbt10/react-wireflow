@@ -5,6 +5,27 @@ import React, { type ReactNode, type ReactElement } from "react";
 import type { Node, NodeId, Port, Connection, ConnectionId, NodeData, PortPlacement, AbsolutePortPlacement, Size, Position } from "./core";
 import type { CategoryInfo } from "../category/types";
 import type { NodeBehavior } from "./behaviors";
+import type { ConnectionPathCalculationContext, ConnectionPathModel } from "./connectionBehavior";
+
+export type ConnectionPathCalculators = {
+  /** Compute SVG path data string (`d`) for the given context */
+  calculatePath: (ctx: ConnectionPathCalculationContext) => string;
+  /** Create a path model that can be sampled (e.g. midpoint + angle) */
+  createPathModel: (ctx: ConnectionPathCalculationContext) => ConnectionPathModel;
+};
+
+export type ConnectionRenderPathApi = ConnectionPathCalculators & {
+  /**
+   * Compute a path for the current ConnectionRenderContext without having to rebuild ConnectionPathCalculationContext.
+   * You can override just the parts you need (e.g. positions) while inheriting the rest from the render context.
+   */
+  calculateDefaultPath: (overrides?: Partial<ConnectionPathCalculationContext>) => string;
+  /**
+   * Create a path model for the current ConnectionRenderContext without rebuilding ConnectionPathCalculationContext.
+   * You can override just the parts you need (e.g. positions) while inheriting the rest from the render context.
+   */
+  createDefaultPathModel: (overrides?: Partial<ConnectionPathCalculationContext>) => ConnectionPathModel;
+};
 
 /**
  * External data reference for nodes
@@ -181,6 +202,8 @@ export type ConnectionRenderContext = {
   isDragging?: boolean;
   /** Drag progress (0-1) for visual feedback */
   dragProgress?: number;
+  /** Connection path calculators (no-hooks API for custom renderers) */
+  path: ConnectionRenderPathApi;
   /** Pointer and context menu handlers that preserve editor behavior */
   handlers: {
     onPointerDown: (e: React.PointerEvent) => void;

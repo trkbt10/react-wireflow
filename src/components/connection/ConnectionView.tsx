@@ -9,9 +9,9 @@ import { hasPortPositionChanged } from "../../core/port/identity/comparators";
 import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePortPosition";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
-import type { ConnectionRenderContext, PortDefinition } from "../../types/NodeDefinition";
+import type { ConnectionPathCalculators, ConnectionRenderContext, PortDefinition } from "../../types/NodeDefinition";
 import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
-import { useConnectionPathModelCalculator } from "../../contexts/connection-behavior/context";
+import { useConnectionPathCalculator, useConnectionPathModelCalculator } from "../../contexts/connection-behavior/context";
 import {
   CONNECTION_APPEARANCES,
   determineConnectionInteractionPhase,
@@ -19,6 +19,7 @@ import {
   type ConnectionInteractionPhase,
   type ConnectionVisualAppearance,
 } from "../../core/connection/appearance";
+import { createConnectionRenderPathApi } from "../../core/connection/renderPathApi";
 import { createMarkerGeometry, placeMarkerGeometry } from "../../core/connection/marker";
 import styles from "./ConnectionView.module.css";
 
@@ -43,6 +44,11 @@ export type ConnectionViewProps = {
   toNodePosition?: Position;
   fromNodeSize?: { width: number; height: number };
   toNodeSize?: { width: number; height: number };
+  /**
+   * Connection path calculators.
+   * Custom connection renderers can use this to compute the path without calling hooks.
+   */
+  pathCalculators?: ConnectionPathCalculators;
   onPointerDown?: (e: React.PointerEvent, connectionId: string) => void;
   onPointerEnter?: (e: React.PointerEvent, connectionId: string) => void;
   onPointerLeave?: (e: React.PointerEvent, connectionId: string) => void;
@@ -58,6 +64,7 @@ type ConnectionViewInnerProps = {
   isAdjacentToSelectedNode: boolean;
   isDragging: boolean;
   dragProgress: number;
+  pathCalculators: ConnectionPathCalculators;
   customRenderer: PortDefinition["renderConnection"] | undefined;
   renderContext: ConnectionRenderContext;
   onPointerDown: (e: React.PointerEvent) => void;
@@ -78,6 +85,7 @@ const ConnectionViewInnerComponent: React.FC<ConnectionViewInnerProps> = ({
   isAdjacentToSelectedNode,
   isDragging,
   dragProgress,
+  pathCalculators,
   customRenderer,
   renderContext,
   onPointerDown,
@@ -116,9 +124,8 @@ const ConnectionViewInnerComponent: React.FC<ConnectionViewInnerProps> = ({
     ],
   );
 
-  const createPathModel = useConnectionPathModelCalculator();
   const { pathData, midAndAngle } = React.useMemo(() => {
-    const model = createPathModel({
+    const model = pathCalculators.createPathModel({
       outputPosition: endpoints.outputPosition,
       inputPosition: endpoints.inputPosition,
       ...pathCalculationContext,
@@ -126,7 +133,7 @@ const ConnectionViewInnerComponent: React.FC<ConnectionViewInnerProps> = ({
     return { pathData: model.toPathData(), midAndAngle: model.pointAt(0.5) };
   },
     [
-      createPathModel,
+      pathCalculators,
       endpoints.outputPosition.x,
       endpoints.outputPosition.y,
       endpoints.inputPosition.x,
@@ -282,12 +289,22 @@ const ConnectionViewContainer: React.FC<ConnectionViewProps> = ({
   toNodePosition,
   fromNodeSize,
   toNodeSize,
+  pathCalculators: providedPathCalculators,
   onPointerDown,
   onPointerEnter,
   onPointerLeave,
   onContextMenu,
 }) => {
   const connectionId = connection.id;
+
+  const fallbackCalculatePath = useConnectionPathCalculator();
+  const fallbackCreatePathModel = useConnectionPathModelCalculator();
+  const pathCalculators = React.useMemo<ConnectionPathCalculators>(() => {
+    if (providedPathCalculators) {
+      return providedPathCalculators;
+    }
+    return { calculatePath: fallbackCalculatePath, createPathModel: fallbackCreatePathModel };
+  }, [providedPathCalculators, fallbackCalculatePath, fallbackCreatePathModel]);
 
   const baseFromPosition = useDynamicConnectionPoint(fromNode.id, fromPort.id, {
     positionOverride: fromNodePosition ?? undefined,
@@ -354,6 +371,18 @@ const ConnectionViewContainer: React.FC<ConnectionViewProps> = ({
       isAdjacentToSelectedNode,
       isDragging,
       dragProgress,
+      path: createConnectionRenderPathApi({
+        calculators: pathCalculators,
+        defaultContext: {
+          outputPosition: endpoints.outputPosition,
+          inputPosition: endpoints.inputPosition,
+          connection,
+          outputNode: fromNode,
+          inputNode: toNode,
+          outputPort: fromPort,
+          inputPort: toPort,
+        },
+      }),
       handlers: {
         onPointerDown: handlePointerDown,
         onPointerEnter: handlePointerEnter,
@@ -373,6 +402,7 @@ const ConnectionViewContainer: React.FC<ConnectionViewProps> = ({
       isAdjacentToSelectedNode,
       isDragging,
       dragProgress,
+      pathCalculators,
     ],
   );
 
@@ -385,6 +415,7 @@ const ConnectionViewContainer: React.FC<ConnectionViewProps> = ({
       isAdjacentToSelectedNode={isAdjacentToSelectedNode}
       isDragging={isDragging}
       dragProgress={dragProgress}
+      pathCalculators={pathCalculators}
       customRenderer={customRenderer}
       renderContext={renderContext}
       onPointerDown={handlePointerDown}
@@ -408,6 +439,10 @@ const areContainerPropsEqual = (prev: ConnectionViewProps, next: ConnectionViewP
     prev.isDragging !== next.isDragging ||
     prev.dragProgress !== next.dragProgress
   ) {
+    return false;
+  }
+
+  if (prev.pathCalculators !== next.pathCalculators) {
     return false;
   }
 

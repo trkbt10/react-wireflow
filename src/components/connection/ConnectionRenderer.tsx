@@ -20,6 +20,8 @@ import { getPreviewPosition } from "../../core/geometry/position";
 import { hasPositionChanged, hasSizeChanged } from "../../core/geometry/comparators";
 import { getNodeResizeSize } from "../../core/node/resizeState";
 import { ensurePort } from "../../core/port/identity/guards";
+import { useConnectionPathCalculator, useConnectionPathModelCalculator } from "../../contexts/connection-behavior/context";
+import type { ConnectionViewProps } from "./ConnectionView";
 import type { Connection, Node as EditorNode, Port as CorePort, Position, Size } from "../../types/core";
 import type { PointerType } from "../../types/interaction";
 
@@ -41,6 +43,7 @@ type ConnectionRendererInnerProps = {
   toPreviewPosition: Position | null;
   fromResizeSize: Size | null;
   toResizeSize: Size | null;
+  pathCalculators: NonNullable<ConnectionViewProps["pathCalculators"]>;
   isSelected: boolean;
   isHovered: boolean;
   isAdjacentToSelectedNode: boolean;
@@ -64,6 +67,7 @@ const ConnectionRendererInnerComponent: React.FC<ConnectionRendererInnerProps> =
   toPreviewPosition,
   fromResizeSize,
   toResizeSize,
+  pathCalculators,
   isSelected,
   isHovered,
   isAdjacentToSelectedNode,
@@ -86,6 +90,7 @@ const ConnectionRendererInnerComponent: React.FC<ConnectionRendererInnerProps> =
       toNodePosition={toPreviewPosition || undefined}
       fromNodeSize={fromResizeSize || undefined}
       toNodeSize={toResizeSize || undefined}
+      pathCalculators={pathCalculators}
       isSelected={isSelected}
       isHovered={isHovered}
       onPointerDown={onPointerDown}
@@ -98,6 +103,9 @@ const ConnectionRendererInnerComponent: React.FC<ConnectionRendererInnerProps> =
 
 const areInnerPropsEqual = (prev: ConnectionRendererInnerProps, next: ConnectionRendererInnerProps): boolean => {
   if (prev.connection !== next.connection) {
+    return false;
+  }
+  if (prev.pathCalculators !== next.pathCalculators) {
     return false;
   }
   if (prev.isSelected !== next.isSelected || prev.isHovered !== next.isHovered) {
@@ -136,6 +144,12 @@ ConnectionRendererInner.displayName = "ConnectionRendererInner";
 
 const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = ({ connection }) => {
   const { getNodePorts } = useNodeEditorApi();
+  const calculatePath = useConnectionPathCalculator();
+  const createPathModel = useConnectionPathModelCalculator();
+  const pathCalculators = React.useMemo(
+    () => ({ calculatePath, createPathModel }),
+    [calculatePath, createPathModel],
+  );
   const nodesForConnection = useNodeEditorSelector(
     (state) => ({
       fromNode: state.nodes[connection.fromNodeId],
@@ -328,6 +342,7 @@ const ConnectionRendererContainerComponent: React.FC<ConnectionRendererProps> = 
       toPreviewPosition={toPreviewPosition}
       fromResizeSize={fromResizeSize}
       toResizeSize={toResizeSize}
+      pathCalculators={pathCalculators}
       isSelected={isSelected}
       isHovered={isHovered}
       isAdjacentToSelectedNode={isAdjacentToSelectedNode}

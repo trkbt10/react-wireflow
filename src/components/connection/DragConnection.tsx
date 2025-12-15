@@ -9,9 +9,11 @@ import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePortPosition";
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
 import { useConnectionPathData } from "./ConnectionPath";
-import type { ConnectionRenderContext } from "../../types/NodeDefinition";
+import type { ConnectionPathCalculators, ConnectionRenderContext } from "../../types/NodeDefinition";
 import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
 import type { Connection, Node as EditorNode, Port as CorePort } from "../../types/core";
+import { useConnectionPathCalculator, useConnectionPathModelCalculator } from "../../contexts/connection-behavior/context";
+import { createConnectionRenderPathApi } from "../../core/connection/renderPathApi";
 import styles from "./DragConnection.module.css";
 
 // ============================================================================
@@ -219,6 +221,12 @@ const useDisconnectingParams = (): DragConnectionParams | null => {
 
 const DragConnectionComponent: React.FC = () => {
   const { getPortDefinition } = useNodeDefinitions();
+  const calculatePath = useConnectionPathCalculator();
+  const createPathModel = useConnectionPathModelCalculator();
+  const pathCalculators = React.useMemo<ConnectionPathCalculators>(
+    () => ({ calculatePath, createPathModel }),
+    [calculatePath, createPathModel],
+  );
 
   const connectingParams = useConnectingParams();
   const disconnectingParams = useDisconnectingParams();
@@ -289,6 +297,18 @@ const DragConnectionComponent: React.FC = () => {
     isAdjacentToSelectedNode: false,
     isDragging: true,
     dragProgress: undefined,
+    path: createConnectionRenderPathApi({
+      calculators: pathCalculators,
+      defaultContext: {
+        outputPosition: endpoints.outputPosition,
+        inputPosition: endpoints.inputPosition,
+        connection,
+        outputNode,
+        inputNode,
+        outputPort,
+        inputPort,
+      },
+    }),
     handlers: EMPTY_PREVIEW_HANDLERS,
   };
 
