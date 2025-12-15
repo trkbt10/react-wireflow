@@ -13,18 +13,23 @@ import {
   type NodeEditorData,
 } from "../../../../core";
 import { NodeCanvas } from "../../../../components/canvas/NodeCanvas";
-import styles from "./custom-layout-demo.module.css";
-
-// Simple custom panel components
-const CustomSidebar = React.memo<{ children?: React.ReactNode }>(({ children }) => {
-  return <div className={styles.sidebar}>{children}</div>;
-});
-CustomSidebar.displayName = "CustomSidebar";
-
-const CustomInspector = React.memo<{ children?: React.ReactNode }>(({ children }) => {
-  return <div className={styles.inspector}>{children}</div>;
-});
-CustomInspector.displayName = "CustomInspector";
+import {
+  InspectorDefinitionItem,
+  InspectorDefinitionList,
+  InspectorSection,
+  InspectorSectionTitle,
+  ReadOnlyField,
+} from "../../../../inspector";
+import { ExampleLayout } from "../../shared/parts/ExampleLayout";
+import { ExampleWrapper } from "../../shared/parts/ExampleWrapper";
+import {
+  ThreePaneLayout,
+  ThreePaneLayoutCanvasFrame,
+  ThreePaneLayoutCenter,
+  ThreePaneLayoutLeft,
+  ThreePaneLayoutRight,
+  ThreePaneLayoutStack,
+} from "../../../layouts/ThreePaneLayout";
 
 // Define some sample node types
 const sampleNodeDefinitions = [
@@ -135,83 +140,61 @@ export const CustomLayoutDemo: React.FC = () => {
   const nodeListItems = React.useMemo(
     () =>
       sampleNodeDefinitions.map((def) => (
-        <div key={def.type} className={styles.nodeItem}>
-          {def.displayName}
-        </div>
+        <ReadOnlyField key={def.type}>{def.displayName}</ReadOnlyField>
       )),
     [],
   );
 
   return (
-    <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>
-          <span>Custom Layout Demo</span>
-          <span className={styles.badge}>
-            <span className={styles.badgeIcon}></span>
-            NO GRID LAYOUT
-          </span>
-        </div>
-        <div className={styles.engineInfo}>
-          <span>Layout Engine:</span>
-          <span className={styles.engineBadge}>Flexbox (Custom)</span>
-        </div>
-      </div>
-
-      {/* Main content area */}
-      <div className={styles.mainContent}>
-        {/* NodeEditorCore wraps everything with necessary providers */}
+    <ExampleLayout>
+      <ExampleWrapper>
         <NodeEditorCore
           initialData={initialData}
           onDataChange={setData}
           nodeDefinitions={sampleNodeDefinitions}
           includeDefaultDefinitions={false}
           autoSaveEnabled={false}
+          settingsManager={settingsManager}
         >
-          {/* Left sidebar */}
-          <CustomSidebar>
-            <h3 className={styles.sidebarTitle}>Node Palette</h3>
-            <p className={styles.sidebarDescription}>
-              Right-click on the canvas to add nodes from this custom palette
-            </p>
-            <div className={styles.nodeList}>{nodeListItems}</div>
-          </CustomSidebar>
+          <ThreePaneLayout>
+            <ThreePaneLayoutLeft>
+              <ThreePaneLayoutStack>
+                <InspectorSection>
+                  <InspectorSectionTitle>Layout</InspectorSectionTitle>
+                  <ReadOnlyField>
+                    This example composes <code>NodeEditorCore</code> + <code>NodeEditorCanvas</code> without GridLayout.
+                  </ReadOnlyField>
+                  <ReadOnlyField>Right-click on the canvas to open the node search menu.</ReadOnlyField>
+                </InspectorSection>
+                <InspectorSection>
+                  <InspectorSectionTitle>Node Palette</InspectorSectionTitle>
+                  {nodeListItems}
+                </InspectorSection>
+              </ThreePaneLayoutStack>
+            </ThreePaneLayoutLeft>
 
-          {/* Canvas area with NodeEditorCanvas */}
-          <div className={styles.canvasArea}>
-            <NodeEditorCanvas settingsManager={settingsManager}>
-              <NodeCanvas />
-            </NodeEditorCanvas>
-          </div>
+            <ThreePaneLayoutCenter>
+              <ThreePaneLayoutCanvasFrame>
+                <NodeEditorCanvas>
+                  <NodeCanvas />
+                </NodeEditorCanvas>
+              </ThreePaneLayoutCanvasFrame>
+            </ThreePaneLayoutCenter>
 
-          {/* Right inspector */}
-          <CustomInspector>
-            <h3 className={styles.inspectorTitle}>Inspector</h3>
-            <p className={styles.inspectorDescription}>
-              Custom inspector panel built with pure Flexbox
-            </p>
-            <div className={styles.statsGrid}>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Nodes</span>
-                <span className={styles.statValue}>{nodeCount}</span>
-              </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Connections</span>
-                <span className={styles.statValue}>{connectionCount}</span>
-              </div>
-            </div>
-          </CustomInspector>
+            <ThreePaneLayoutRight>
+              <ThreePaneLayoutStack>
+                <InspectorSection>
+                  <InspectorSectionTitle>Stats</InspectorSectionTitle>
+                  <InspectorDefinitionList>
+                    <InspectorDefinitionItem label="Nodes">{nodeCount}</InspectorDefinitionItem>
+                    <InspectorDefinitionItem label="Connections">{connectionCount}</InspectorDefinitionItem>
+                  </InspectorDefinitionList>
+                </InspectorSection>
+              </ThreePaneLayoutStack>
+            </ThreePaneLayoutRight>
+          </ThreePaneLayout>
         </NodeEditorCore>
-      </div>
-
-      {/* Footer */}
-      <div className={styles.footer}>
-        <span className={styles.layoutEngineLabel}>
-          Built with NodeEditorCore + NodeEditorCanvas (no GridLayout dependency)
-        </span>
-        <span className={styles.footerBadge}>100% Custom Flexbox</span>
-      </div>
-    </div>
+      </ExampleWrapper>
+    </ExampleLayout>
   );
 };

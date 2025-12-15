@@ -17,7 +17,7 @@
 .footerWrapper {
   flex-shrink: 0;
   padding: 8px;
-  background: #f5f5f5;
+  background: var(--node-editor-control-background);
   font-size: 12px;
   box-sizing: border-box;
 }

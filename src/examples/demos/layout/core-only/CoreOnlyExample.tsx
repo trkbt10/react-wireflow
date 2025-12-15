@@ -11,7 +11,10 @@ import {
   type NodeEditorData,
 } from "../../../../core";
 import { NodeCanvas } from "../../../../components/canvas/NodeCanvas";
-import styles from "./CoreOnlyExample.module.css";
+import { InspectorSection, InspectorSectionTitle, ReadOnlyField } from "../../../../inspector";
+import { ExampleLayout } from "../../shared/parts/ExampleLayout";
+import { ExampleWrapper } from "../../shared/parts/ExampleWrapper";
+import { TwoSideLayout, TwoSideLayoutCanvasFrame, TwoSideLayoutMain, TwoSideLayoutSidebar, TwoSideLayoutStack } from "../../../layouts/TwoSideLayout";
 
 // Simple node definitions
 const nodeDefinitions = [
@@ -93,34 +96,40 @@ const initialData: Partial<NodeEditorData> = {
  */
 export const CoreOnlyExample: React.FC = () => {
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Core Only Example</h1>
-        <p className={styles.description}>
-          Minimal setup using only NodeEditorCore + NodeCanvas.
-          No GridLayout, no context menus, no panels.
-        </p>
-      </div>
-
-      <div className={styles.canvasContainer}>
-        <NodeEditorCore
-          initialData={initialData}
-          nodeDefinitions={nodeDefinitions}
-          includeDefaultDefinitions={false}
-          autoSaveEnabled={false}
-        >
-          <NodeCanvas />
-        </NodeEditorCore>
-      </div>
-
-      <div className={styles.footer}>
-        <div className={styles.controls}>
-          <span className={styles.controlItem}>Pan: Drag canvas or Space + Drag</span>
-          <span className={styles.controlItem}>Zoom: Scroll wheel</span>
-          <span className={styles.controlItem}>Move node: Drag node</span>
-          <span className={styles.controlItem}>Connect: Drag from port</span>
-        </div>
-      </div>
-    </div>
+    <ExampleLayout>
+      <ExampleWrapper>
+        <TwoSideLayout>
+          <TwoSideLayoutSidebar>
+            <TwoSideLayoutStack>
+              <InspectorSection>
+                <InspectorSectionTitle>Core Only</InspectorSectionTitle>
+                <ReadOnlyField>
+                  Minimal setup using only <code>NodeEditorCore</code> + <code>NodeCanvas</code>.
+                </ReadOnlyField>
+              </InspectorSection>
+              <InspectorSection>
+                <InspectorSectionTitle>Controls</InspectorSectionTitle>
+                <ReadOnlyField>Pan: drag canvas or Space + drag</ReadOnlyField>
+                <ReadOnlyField>Zoom: scroll wheel</ReadOnlyField>
+                <ReadOnlyField>Move node: drag node</ReadOnlyField>
+                <ReadOnlyField>Connect: drag from port</ReadOnlyField>
+              </InspectorSection>
+            </TwoSideLayoutStack>
+          </TwoSideLayoutSidebar>
+          <TwoSideLayoutMain>
+            <TwoSideLayoutCanvasFrame>
+              <NodeEditorCore
+                initialData={initialData}
+                nodeDefinitions={nodeDefinitions}
+                includeDefaultDefinitions={false}
+                autoSaveEnabled={false}
+              >
+                <NodeCanvas />
+              </NodeEditorCore>
+            </TwoSideLayoutCanvasFrame>
+          </TwoSideLayoutMain>
+        </TwoSideLayout>
+      </ExampleWrapper>
+    </ExampleLayout>
   );
 };

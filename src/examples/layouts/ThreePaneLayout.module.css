@@ -1,6 +1,6 @@
 .root {
   display: grid;
-  grid-template-columns: minmax(240px, 360px) 1fr;
+  grid-template-columns: minmax(220px, 300px) 1fr minmax(220px, 320px);
   grid-template-rows: 1fr;
   gap: var(--node-editor-space-md, 12px);
   height: 100%;
@@ -10,7 +10,7 @@
   padding: var(--node-editor-space-md, 12px);
 }
 
-.sidebar {
+.left {
   min-height: 0;
   min-width: 0;
   overflow: auto;
@@ -21,7 +21,18 @@
   box-shadow: var(--node-editor-card-shadow);
 }
 
-.main {
+.right {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--node-editor-inspector-space-md, 16px);
+  border: var(--node-editor-card-border);
+  border-radius: var(--node-editor-card-border-radius);
+  background: var(--node-editor-control-background);
+  box-shadow: var(--node-editor-card-shadow);
+}
+
+.center {
   min-height: 0;
   min-width: 0;
   display: flex;
@@ -45,3 +56,4 @@
   min-height: 0;
   min-width: 0;
 }
+
