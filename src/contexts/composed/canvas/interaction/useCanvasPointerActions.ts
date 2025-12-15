@@ -267,10 +267,6 @@ export const useCanvasPointerActions = ({
       return;
     }
 
-    if (pointerType !== "mouse" && pointerType !== "pen") {
-      return;
-    }
-
     if (intent.canPan && !intent.canClearSelection) {
       e.preventDefault();
       canvasActions.startPan({ x: e.clientX, y: e.clientY });
@@ -349,12 +345,18 @@ export const useCanvasPointerActions = ({
           primaryPointerRef.current = null;
         }
       } else if (primaryPointer.status === "pan") {
+        if (pointerType === "touch") {
+          e.preventDefault();
+        }
         schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY });
         return;
       }
     }
 
     if (canvasState.panState.isPanning) {
+      if (pointerType === "touch") {
+        e.preventDefault();
+      }
       schedulePanUpdateRef.current({ x: e.clientX, y: e.clientY });
       return;
     }
