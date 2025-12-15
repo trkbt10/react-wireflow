@@ -6,6 +6,8 @@ import type { Port } from "../../types/core";
 import { useDynamicPortPosition } from "../../contexts/node-ports/hooks/usePortPosition";
 import { useNodeEditorApi } from "../../contexts/composed/node-editor/context";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
+import { useCanvasInteractionSelector } from "../../contexts/composed/canvas/interaction/context";
+import { hasPositionChanged, hasSizeChanged } from "../../core/geometry/comparators";
 import type { PortRenderContext } from "../../types/NodeDefinition";
 import styles from "./PortView.module.css";
 
@@ -63,8 +65,45 @@ export const PortView: React.FC<PortViewProps> = ({
   isHovered = false,
   isConnected = false,
 }) => {
+  const resizeOverride = useCanvasInteractionSelector(
+    (state) => {
+      const current = state.resizeState;
+      if (!current || current.nodeId !== port.nodeId) {
+        return null;
+      }
+      return { size: current.currentSize, position: current.currentPosition };
+    },
+    {
+      areEqual: (a, b) => {
+        if (a === b) {
+          return true;
+        }
+        if (!a || !b) {
+          return false;
+        }
+        if (hasSizeChanged(a.size, b.size)) {
+          return false;
+        }
+        if (hasPositionChanged(a.position, b.position)) {
+          return false;
+        }
+        return true;
+      },
+    },
+  );
+
+  const portPositionOptions = React.useMemo(() => {
+    if (!resizeOverride) {
+      return undefined;
+    }
+    return {
+      positionOverride: resizeOverride.position,
+      sizeOverride: resizeOverride.size,
+    };
+  }, [resizeOverride]);
+
   // Get dynamic port position
-  const portPosition = useDynamicPortPosition(port.nodeId, port.id);
+  const portPosition = useDynamicPortPosition(port.nodeId, port.id, portPositionOptions);
   const renderPosition = portPosition?.renderPosition;
   const portPositionStyle: React.CSSProperties = React.useMemo(() => {
     if (!renderPosition) {
