@@ -56,6 +56,12 @@
       "cssFile": "constructivist.css"
     },
     {
+      "id": "cursor",
+      "label": "Cursor",
+      "description": "Cursor-inspired dark theme with crisp surfaces and vibrant green accents.",
+      "cssFile": "cursor.css"
+    },
+    {
       "id": "figma",
       "label": "Figma",
       "description": "Clean light interface with Figma's signature blue and minimal design language.",

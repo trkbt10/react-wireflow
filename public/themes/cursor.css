@@ -1,0 +1,407 @@
+:root {
+  /* ========================================
+     C U R S O R   T H E M E
+     Cursor IDE Dark Theme
+     Based on VSCode Dark with muted cyan accent
+     ======================================== */
+
+  /* ========================================
+     SPACING SYSTEM
+     ======================================== */
+
+  /* Core spacing scale */
+  --node-editor-space-xs: 4px;
+  --node-editor-space-sm: 8px;
+  --node-editor-space-md: 12px;
+  --node-editor-space-lg: 16px;
+  --node-editor-space-xl: 24px;
+  --node-editor-space-xxl: 32px;
+
+  /* Layout spacing */
+  --node-editor-control-padding: var(--node-editor-space-sm) var(--node-editor-space-lg);
+
+  /* Inspector spacing system */
+  --node-editor-inspector-space-xs: var(--node-editor-space-xs);
+  --node-editor-inspector-space-sm: var(--node-editor-space-sm);
+  --node-editor-inspector-space-md: var(--node-editor-space-md);
+  --node-editor-inspector-space-lg: var(--node-editor-space-lg);
+  --node-editor-inspector-space-xl: var(--node-editor-space-xl);
+  --node-editor-inspector-space-xxl: var(--node-editor-space-xxl);
+  --node-editor-inspector-content-padding: var(--node-editor-inspector-space-md);
+  --node-editor-inspector-header-padding-top: var(--node-editor-inspector-space-md);
+  --node-editor-inspector-header-padding-bottom: var(--node-editor-inspector-space-xs);
+  --node-editor-inspector-header-gap: var(--node-editor-inspector-space-sm);
+  --node-editor-inspector-section-header-height: 42px;
+  --node-editor-inspector-section-gap: var(--node-editor-inspector-space-md);
+  --node-editor-inspector-field-gap: var(--node-editor-inspector-space-sm);
+  --node-editor-inspector-inline-gap: var(--node-editor-inspector-space-sm);
+  --node-editor-inspector-empty-padding-vertical: var(--node-editor-inspector-space-xxl);
+  --node-editor-inspector-empty-padding-horizontal: var(--node-editor-inspector-space-lg);
+  --node-editor-inspector-input-padding: var(--node-editor-space-xs) var(--node-editor-space-sm);
+
+  /* Inspector control dimensions - unified height for inputs, button groups, selects */
+  --node-editor-inspector-control-height: 28px;
+
+  /* ========================================
+     TYPOGRAPHY
+     ======================================== */
+
+  /* Inspector typography */
+  --node-editor-inspector-font-size-title: 0.6875rem;
+  --node-editor-inspector-line-height-title: 1.4;
+  --node-editor-inspector-font-size-body: 0.8125rem;
+  --node-editor-inspector-line-height-body: 1.5;
+  --node-editor-inspector-font-size-meta: 0.6875rem;
+  --node-editor-inspector-line-height-meta: 1.3;
+  --node-editor-inspector-font-weight-medium: 500;
+  --node-editor-inspector-font-size-heading: 0.875rem;
+  --node-editor-inspector-font-size: var(--node-editor-inspector-font-size-body);
+  --node-editor-inspector-line-height: var(--node-editor-inspector-line-height-body);
+
+  /* Font families & typography */
+  --node-editor-theme-default-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --node-editor-theme-control-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --node-editor-theme-label-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --node-editor-system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --node-editor-font-mono: "Consolas", "Courier New", monospace;
+  --node-editor-title-font: 600 0.875rem/1.4 var(--node-editor-theme-label-font-family);
+  --node-editor-subtitle-font: 500 0.8125rem/1.4 var(--node-editor-theme-label-font-family);
+  --node-editor-caption-font: 400 0.75rem/1.3 var(--node-editor-theme-default-font-family);
+  --node-editor-control-text-font: 500 var(--node-editor-inspector-font-size-body) / 1.4
+    var(--node-editor-theme-control-font-family);
+  --node-editor-input-font: 400 var(--node-editor-inspector-font-size-body) / 1.5
+    var(--node-editor-theme-default-font-family);
+  --node-editor-font-size-lg: 1rem;
+  --node-editor-font-size-sm: 0.875rem;
+  --node-editor-font-size-xs: 0.75rem;
+
+  /* ========================================
+     COLORS - TEXT
+     ======================================== */
+
+  /* Text colors - VSCode Dark theme */
+  --node-editor-text-color: #cccccc;
+  --node-editor-text-secondary: #858585;
+  --node-editor-header-text-color: #ffffff;
+  --node-editor-label-color: var(--node-editor-text-color);
+  --node-editor-secondary-label-color: #9d9d9d;
+  --node-editor-tertiary-label-color: #6f6f6f;
+  --node-editor-quaternary-label-color: #4a4a4a;
+  --node-editor-control-text-color: var(--node-editor-text-color);
+  --node-editor-control-text-color-primary: #ffffff;
+  --node-editor-control-text-color-secondary: #cccccc;
+  --node-editor-control-hover-text-color-primary: #ffffff;
+  --node-editor-input-text-color: var(--node-editor-text-color);
+  --node-editor-selected-control-text-color: #4A9EBD;
+  --node-editor-selected-menu-item-text-color: #ffffff;
+  --node-editor-disabled-control-text-color: rgba(204, 204, 204, 0.4);
+
+  /* ========================================
+     COLORS - ACCENT & STATUS
+     ======================================== */
+
+  /* Status & accent colors - Muted cyan */
+  --node-editor-accent-color: #4A9EBD;
+  --node-editor-accent-color-hover: #5CB3CC;
+  --node-editor-color-primary: #4A9EBD;
+  --node-editor-keyboard-focus-indicator-color: rgba(74, 158, 189, 0.4);
+  --node-editor-success-color: #89d185;
+  --node-editor-warning-color: #cca700;
+  --node-editor-caution-color: #f48771;
+  --node-editor-caution-hover-background: rgba(244, 135, 113, 0.15);
+  --node-editor-system-orange-color: #d7ba7d;
+  --node-editor-system-red-color: #f48771;
+  --node-editor-connection-color: #4A9EBD;
+
+  /* ========================================
+     COLORS - SURFACES
+     ======================================== */
+
+  /* Surface colors - VSCode Dark backgrounds */
+  --node-editor-surface-primary: #1e1e1e;
+  --node-editor-surface-secondary: #252526;
+  --node-editor-surface-tertiary: #2d2d30;
+  --node-editor-background-surface: #252526;
+  --node-editor-window-background-color: #1e1e1e;
+  --node-editor-under-page-background-color: #1e1e1e;
+
+  /* Selected state backgrounds */
+  --node-editor-selected-content-background-color: rgba(74, 158, 189, 0.15);
+  --node-editor-selected-control-color: rgba(74, 158, 189, 0.2);
+  --node-editor-selected-secondary-color: rgba(255, 255, 255, 0.9);
+  --node-editor-selected-hover-background: rgba(74, 158, 189, 0.25);
+
+  /* System fills */
+  --node-editor-tertiary-system-background: rgba(255, 255, 255, 0.06);
+  --node-editor-tertiary-system-fill-color: rgba(255, 255, 255, 0.08);
+  --node-editor-quaternary-system-fill-color: rgba(255, 255, 255, 0.1);
+
+  /* ========================================
+     COLORS - CONTROLS
+     ======================================== */
+
+  /* Control surfaces */
+  --node-editor-control-background: #3c3c3c;
+  --node-editor-control-background-primary: #4A9EBD;
+  --node-editor-control-background-secondary: #2d2d30;
+  --node-editor-control-hover-background: #505050;
+  --node-editor-control-hover-background-primary: #5CB3CC;
+  --node-editor-hover-background: rgba(255, 255, 255, 0.1);
+  --node-editor-control-box-shadow-primary: 0 2px 8px rgba(74, 158, 189, 0.4);
+  --node-editor-control-box-shadow-secondary: 0 1px 4px rgba(0, 0, 0, 0.2);
+
+  /* ========================================
+     COLORS - INPUTS
+     ======================================== */
+
+  /* Input surfaces */
+  --node-editor-input-background: #3c3c3c;
+  --node-editor-input-border: 1px solid rgba(255, 255, 255, 0.1);
+  --node-editor-input-border-hover: rgba(74, 158, 189, 0.6);
+  --node-editor-input-box-shadow: none;
+  --node-editor-input-padding: var(--node-editor-space-sm) var(--node-editor-space-md);
+
+  /* ========================================
+     COLORS - CARDS & PANELS
+     ======================================== */
+
+  /* Card & panel styling */
+  --node-editor-card-border-color: rgba(255, 255, 255, 0.1);
+  --node-editor-card-border: 1px solid var(--node-editor-card-border-color);
+  --node-editor-card-border-radius: var(--node-editor-radius-xs);
+  --node-editor-card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  --node-editor-node-card-box-shadow: var(--node-editor-card-box-shadow);
+  --node-editor-card-hover-box-shadow: 0 4px 16px rgba(74, 158, 189, 0.2);
+  --node-editor-card-elevated-box-shadow: 0 8px 32px rgba(74, 158, 189, 0.25);
+  --node-editor-card-focus-box-shadow: 0 0 0 2px var(--node-editor-keyboard-focus-indicator-color);
+  --node-editor-card-disabled-background: rgba(60, 60, 60, 0.5);
+  --node-editor-card-filled-background: rgba(74, 158, 189, 0.12);
+  --node-editor-card-filled-hover-background: rgba(74, 158, 189, 0.18);
+  --node-editor-card-hover-border-color: rgba(74, 158, 189, 0.4);
+
+  /* ========================================
+     COLORS - DIALOGS & OVERLAYS
+     ======================================== */
+
+  /* Dialogs & overlays */
+  --node-editor-dialog-background: #252526;
+  --node-editor-dialog-box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --node-editor-dialog-level-elevation: 1000;
+
+  /* ========================================
+     COLORS - SCROLLBARS
+     ======================================== */
+
+  /* Scrollbars */
+  --node-editor-scroll-bar-thumb-color: rgba(121, 121, 121, 0.4);
+  --node-editor-active-scroll-bar-thumb-color: rgba(74, 158, 189, 0.5);
+
+  /* ========================================
+     COLORS - TABLES & LISTS
+     ======================================== */
+
+  /* Tables & list accents */
+  --node-editor-table-header-background-color: #2d2d30;
+  --node-editor-table-header-background-color-hover: #3c3c3c;
+  --node-editor-table-header-background-color-active: #505050;
+
+  /* ========================================
+     COLORS - NODES
+     ======================================== */
+
+  /* Node-specific colors */
+  --node-editor-group-node-background: rgba(74, 158, 189, 0.08);
+  --node-editor-group-node-border: rgba(74, 158, 189, 0.3);
+  --node-editor-group-node-active-background: rgba(74, 158, 189, 0.15);
+  --node-editor-group-node-active-color: rgba(74, 158, 189, 0.6);
+  --node-editor-node-port-input-color: #89d185;
+  --node-editor-node-port-output-color: #4A9EBD;
+
+  /* ========================================
+     CANVAS
+     ======================================== */
+
+  /* Canvas grid */
+  --node-editor-grid-color: #9d9d9d;
+  --node-editor-grid-opacity: 0.18;
+
+  /* ========================================
+     SHADOWS
+     ======================================== */
+
+  /* Shadow system */
+  --node-editor-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --node-editor-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --node-editor-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.24);
+
+  /* Inspector shadows */
+  --node-editor-inspector-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  --node-editor-inspector-header-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+
+  /* ========================================
+     TRANSITIONS
+     ======================================== */
+
+  /* Transition system */
+  --node-editor-transition-duration: 0.2s;
+
+  /* ========================================
+     BORDERS & RADII
+     ======================================== */
+
+  /* Border Radii */
+  --node-editor-border-radius-xxs: 0;
+  --node-editor-border-radius-xs: 0;
+  --node-editor-radius-xs: 0;
+  --node-editor-radius-sm: 2px;
+  --node-editor-radius-md: 3px;
+  --node-editor-control-border-radius: var(--node-editor-radius-sm);
+  --node-editor-segment-control-border-radius: var(--node-editor-radius-sm);
+
+  /* Borders */
+  --node-editor-border-width: 1px;
+  --node-editor-border-color: rgba(255, 255, 255, 0.12);
+  --node-editor-divider-color: rgba(255, 255, 255, 0.1);
+  --node-editor-separator-color: rgba(255, 255, 255, 0.08);
+
+  /* ========================================
+     COMPONENTS - TREE & LIST
+     ======================================== */
+
+  /* Tree & List Components */
+  --node-editor-tree-item-height: 28px;
+  --node-editor-tree-indent: 16px;
+
+  /* ========================================
+     COMPONENTS - CONTROLS
+     ======================================== */
+
+  /* Control Buttons */
+  --node-editor-control-button-size-sm: 16px;
+  --node-editor-control-button-size: 20px;
+
+  /* Icons */
+  --node-editor-icon-size-sm: 14px;
+  --node-editor-icon-selected-brightness: 1.2;
+
+  /* ========================================
+     COMPONENTS - SEGMENT CONTROLS
+     ======================================== */
+
+  /* Segment controls */
+  --node-editor-segment-backdrop-filter: none;
+  --node-editor-segment-control-background: rgba(255, 255, 255, 0.06);
+  --node-editor-segment-control-background-color: transparent;
+  --node-editor-segment-control-text-color: #cccccc;
+  --node-editor-segment-control-active-background-color: #4A9EBD;
+  --node-editor-segment-control-active-text-color: #ffffff;
+  --node-editor-segment-control-segment-padding: var(--node-editor-space-xs) var(--node-editor-space-md);
+
+  /* ========================================
+     COMPONENTS - TABS
+     ======================================== */
+
+  /* Tab Navigation - Cursor IDE style */
+  --node-editor-tab-nav-gap: 0;
+  --node-editor-tab-nav-padding: 0;
+  --node-editor-tab-nav-border-radius: 0;
+  --node-editor-tab-nav-background: transparent;
+  --node-editor-tab-nav-box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  --node-editor-tab-button-flex: 0 0 auto;
+  --node-editor-tab-button-min-height: 32px;
+  --node-editor-tab-button-padding: var(--node-editor-space-sm) var(--node-editor-space-lg);
+  --node-editor-tab-button-border-radius: 0;
+  --node-editor-tab-button-background: transparent;
+  --node-editor-tab-button-color: #8b949e;
+  --node-editor-tab-button-font-size: var(--node-editor-inspector-font-size-meta);
+  --node-editor-tab-button-font-weight: 400;
+  --node-editor-tab-button-active-background: transparent;
+  --node-editor-tab-button-active-color: #cccccc;
+  --node-editor-tab-button-active-font-weight: 400;
+  --node-editor-tab-button-active-box-shadow: none;
+  --node-editor-tab-button-hover-background: rgba(255, 255, 255, 0.06);
+  --node-editor-tab-button-hover-color: #cccccc;
+  --node-editor-tab-button-active-indicator-content: "";
+  --node-editor-tab-button-active-indicator-bottom: 0;
+  --node-editor-tab-button-active-indicator-height: 2px;
+  --node-editor-tab-button-active-indicator-background: #4A9EBD;
+
+  /* ========================================
+     COMPONENTS - INSPECTOR ICON BUTTONS
+     ======================================== */
+
+  /* Inspector icon button - VS Code style */
+  --node-editor-inspector-icon-button-size: 26px;
+  --node-editor-inspector-icon-button-size-sm: 22px;
+  --node-editor-inspector-icon-button-icon-size: 16px;
+  --node-editor-inspector-icon-button-icon-size-sm: 14px;
+  --node-editor-inspector-icon-button-background: transparent;
+  --node-editor-inspector-icon-button-background-hover: rgba(255, 255, 255, 0.1);
+  --node-editor-inspector-icon-button-background-active: rgba(74, 158, 189, 0.2);
+  --node-editor-inspector-icon-button-color: #858585;
+  --node-editor-inspector-icon-button-color-hover: #cccccc;
+  --node-editor-inspector-icon-button-color-active: #4A9EBD;
+  --node-editor-inspector-icon-button-color-disabled: rgba(204, 204, 204, 0.3);
+
+  /* ========================================
+     COMPONENTS - INSPECTOR INPUT LABELS
+     ======================================== */
+
+  /* Inspector input label - VS Code typography */
+  --node-editor-inspector-input-label-color: #9d9d9d;
+  --node-editor-inspector-input-label-font-size: 0.6875rem;
+  --node-editor-inspector-input-label-font-weight: 400;
+  --node-editor-inspector-input-label-width: auto;
+  --node-editor-inspector-input-label-min-width: 48px;
+
+  /* ========================================
+     COMPONENTS - INSPECTOR SEGMENT CONTROLS
+     ======================================== */
+
+  /* Inspector segment control - VS Code style */
+  --node-editor-inspector-segment-background: rgba(255, 255, 255, 0.06);
+  --node-editor-inspector-segment-border-radius: 2px;
+  --node-editor-inspector-segment-padding: 0;
+  --node-editor-inspector-segment-gap: 1px;
+  --node-editor-inspector-segment-button-background: transparent;
+  --node-editor-inspector-segment-button-background-hover: rgba(255, 255, 255, 0.1);
+  --node-editor-inspector-segment-button-background-active: #4A9EBD;
+  --node-editor-inspector-segment-button-color: #cccccc;
+  --node-editor-inspector-segment-button-color-hover: #cccccc;
+  --node-editor-inspector-segment-button-color-active: #ffffff;
+  --node-editor-inspector-segment-button-shadow-active: none;
+
+  /* ========================================
+     CONNECTIONS
+     ======================================== */
+
+  /* Connection styling - Cursor theme */
+  --node-editor-connection-base-stroke-width: 2;
+  --node-editor-connection-active-stroke-width: 3;
+  --node-editor-connection-flow-stripe-stroke-width: 1.5;
+  --node-editor-connection-flow-stripe-active-stroke-width: 2.5;
+  --node-editor-connection-direction-stroke-width: 2;
+  --node-editor-connection-hover-shadow: drop-shadow(0 0 6px rgba(74, 158, 189, 0.4));
+  --node-editor-connection-selected-shadow: drop-shadow(0 0 10px rgba(74, 158, 189, 0.6));
+  --node-editor-connection-hover-opacity: 0.85;
+  --node-editor-connection-dragging-opacity: 0.6;
+  --node-editor-connection-stripe-dash-array: 10 14;
+  --node-editor-connection-stripe-dash-offset-bg: -12;
+  --node-editor-connection-stripe-opacity-accent: 0.9;
+  --node-editor-connection-stripe-opacity-background: 0.6;
+  --node-editor-connection-flow-animation-duration: 1.2s;
+  --node-editor-connection-flow-animation-distance: -24;
+  --node-editor-connection-base-transition: stroke 0.2s ease-out, stroke-width 0.2s ease-out;
+  --node-editor-connection-arrow-transition: fill 0.2s ease-out;
+
+  /* Connection drag styling - Cursor theme */
+  --node-editor-connection-drag-stroke-width-connecting: 2;
+  --node-editor-connection-drag-stroke-width-disconnecting: 3;
+  --node-editor-connection-drag-dash-array-connecting: 5 5;
+  --node-editor-connection-drag-dash-array-disconnecting: 8 4;
+  --node-editor-connection-drag-animation-duration: 0.5s;
+  --node-editor-connection-drag-animation-distance: -10;
+}

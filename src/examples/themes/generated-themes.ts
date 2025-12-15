@@ -15,6 +15,7 @@ export type NodeEditorThemeId =
   | "blueprint"
   | "brutalist"
   | "constructivist"
+  | "cursor"
   | "figma"
   | "github"
   | "github-light"
@@ -97,6 +98,12 @@ export const GENERATED_THEMES: NodeEditorTheme[] = [
     label: "Constructivist",
     description: "Avant-garde Russian art style with bold geometry and revolutionary red.",
     cssPath: "/themes/constructivist.css",
+  },
+  {
+    id: "cursor",
+    label: "Cursor",
+    description: "Cursor-inspired dark theme with crisp surfaces and vibrant green accents.",
+    cssPath: "/themes/cursor.css",
   },
   {
     id: "figma",

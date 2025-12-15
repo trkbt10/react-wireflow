@@ -22,6 +22,7 @@
       "require": "./dist/index.cjs"
     },
     "./style.css": "./dist/style.css",
+    "./themes/adobe-light.css": "./public/themes/adobe-light.css",
     "./themes/adobe.css": "./public/themes/adobe.css",
     "./themes/akzidenz-grotesk.css": "./public/themes/akzidenz-grotesk.css",
     "./themes/antigravity.css": "./public/themes/antigravity.css",
@@ -29,6 +30,7 @@
     "./themes/blueprint.css": "./public/themes/blueprint.css",
     "./themes/brutalist.css": "./public/themes/brutalist.css",
     "./themes/constructivist.css": "./public/themes/constructivist.css",
+    "./themes/cursor.css": "./public/themes/cursor.css",
     "./themes/figma.css": "./public/themes/figma.css",
     "./themes/github-light.css": "./public/themes/github-light.css",
     "./themes/github.css": "./public/themes/github.css",
