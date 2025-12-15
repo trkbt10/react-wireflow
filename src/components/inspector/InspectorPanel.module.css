@@ -14,12 +14,6 @@
   padding: 0;
 }
 
-.settingsSectionBody {
-  gap: var(--node-editor-inspector-space-sm);
-  padding-top: var(--node-editor-inspector-space-sm);
-  box-sizing: border-box;
-}
-
 .inspectorReadOnlyField {
   display: block;
   padding: var(--node-editor-inspector-space-sm) var(--node-editor-inspector-space-sm);

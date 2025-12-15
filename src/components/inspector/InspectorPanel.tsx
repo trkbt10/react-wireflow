@@ -127,9 +127,7 @@ export const InspectorSettingsTab: React.FC<InspectorSettingsTabProps> = ({ pane
     <>
       {effectivePanels.map((panel, index) => (
         <PropertySection title={panel.title} key={index}>
-          <div className={styles.settingsSectionBody}>
-            <panel.component />
-          </div>
+          <panel.component />
         </PropertySection>
       ))}
     </>
