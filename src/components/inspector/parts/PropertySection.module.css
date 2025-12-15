@@ -31,5 +31,7 @@
 
 .sectionBody {
   display: grid;
+  padding: var(--node-editor-inspector-inline-gap) 0;
+  box-sizing: border-box;
   gap: var(--node-editor-inspector-section-gap) var(--node-editor-inspector-inline-gap);
 }
