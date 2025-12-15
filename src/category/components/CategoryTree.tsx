@@ -64,7 +64,7 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
         data-is-selected={isSelected}
         data-depth={category.depth}
         onClick={handleClick}
-        style={{ paddingLeft: `calc(var(--node-editor-space-md) * ${category.depth}px)` }}
+        style={{ paddingLeft: `calc(var(--node-editor-space-md) * ${category.depth})` }}
       >
         {hasChildren ? (
           <button
@@ -144,6 +144,7 @@ export const CategoryTree: React.FC<CategoryTreeProps> = ({
         data-is-selected={isAllSelected}
         data-depth={0}
         onClick={handleAllClick}
+        style={{ paddingLeft: "calc(var(--node-editor-space-md) * 0)" }}
       >
         <span className={styles.expandPlaceholder} />
         <span className={styles.categoryLabel}>All</span>

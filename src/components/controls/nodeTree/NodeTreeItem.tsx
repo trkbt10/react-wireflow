@@ -38,19 +38,13 @@ const NodeTreeItemComponent: React.FC<NodeTreeItemProps> = ({
 
   const treeItemStyle = React.useMemo<NodeTreeItemRowStyle>(
     () => ({
-      paddingLeft: `calc(var(--node-editor-space-md) * ${level}px)`,
+      paddingLeft: `calc(var(--node-editor-space-md) * ${level})`,
       "--node-tree-drop-indicator-left": `${level * 16 + 8}px`,
     }),
     [level],
   );
 
-  const {
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = useNodeTreeItemDragAndDrop({
+  const { handleDragStart, handleDragEnd, handleDragOver, handleDragLeave, handleDrop } = useNodeTreeItemDragAndDrop({
     nodeId: node.id,
     isGroup,
     isDraggingTextRef: isDraggingText,
@@ -93,12 +87,7 @@ const NodeTreeItemComponent: React.FC<NodeTreeItemProps> = ({
       {hasChildren &&
         isExpanded &&
         childNodeIds.map((childNodeId) => (
-          <ConnectedNodeTreeItem
-            key={childNodeId}
-            nodeId={childNodeId}
-            level={level + 1}
-            onNodeDrop={onNodeDrop}
-          />
+          <ConnectedNodeTreeItem key={childNodeId} nodeId={childNodeId} level={level + 1} onNodeDrop={onNodeDrop} />
         ))}
     </>
   );
