@@ -5,65 +5,11 @@ import * as React from "react";
 import { act, render } from "@testing-library/react";
 import { NodeEditorCore } from "../src/NodeEditorCore";
 import { NodeCanvas } from "../src/components/canvas/NodeCanvas";
+import { createStraightPathModel } from "../src/core/connection/path";
 import { SettingsManager } from "../src/settings/SettingsManager";
-import type { SettingsStorage, SettingValue } from "../src/settings/types";
 import type { NodeEditorData } from "../src/types/core";
 import type { NodeDefinition } from "../src/types/NodeDefinition";
-
-class MemorySettingsStorage implements SettingsStorage {
-  private values = new Map<string, SettingValue>();
-  private listeners = new Set<(key: string, value: SettingValue) => void>();
-
-  get(key: string): SettingValue | undefined {
-    return this.values.get(key);
-  }
-
-  set(key: string, value: SettingValue): void {
-    this.values.set(key, value);
-    for (const listener of this.listeners) {
-      listener(key, value);
-    }
-  }
-
-  delete(key: string): void {
-    this.values.delete(key);
-    for (const listener of this.listeners) {
-      listener(key, "");
-    }
-  }
-
-  clear(): void {
-    this.values.clear();
-  }
-
-  keys(): string[] {
-    return [...this.values.keys()];
-  }
-
-  getMany(keys: string[]): Record<string, SettingValue> {
-    const result: Record<string, SettingValue> = {};
-    for (const key of keys) {
-      const value = this.values.get(key);
-      if (value !== undefined) {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
-
-  setMany(values: Record<string, SettingValue>): void {
-    for (const [key, value] of Object.entries(values)) {
-      this.set(key, value);
-    }
-  }
-
-  on(_event: "change", handler: (key: string, value: SettingValue) => void): () => void {
-    this.listeners.add(handler);
-    return () => {
-      this.listeners.delete(handler);
-    };
-  }
-}
+import { createMemorySettingsStorage } from "../src/settings/storages/MemorySettingsStorage";
 
 const waitNextFrame = async (): Promise<void> => {
   await act(async () => {
@@ -146,7 +92,7 @@ describe("connection path behavior", () => {
             type: "fixed",
             value: {
               type: "custom",
-              calculatePath: () => "M 1 2 L 3 4",
+              createPath: () => createStraightPathModel({ x: 1, y: 2 }, { x: 3, y: 4 }),
             },
           },
         }}
@@ -162,7 +108,7 @@ describe("connection path behavior", () => {
   });
 
   it("reads control point rounding from settingsManager", async () => {
-    const settingsManager = new SettingsManager({ storage: new MemorySettingsStorage() });
+    const settingsManager = new SettingsManager({ storage: createMemorySettingsStorage() });
     settingsManager.setValue("behavior.connectionControlPointRounding", "vertical");
 
     const initialData = createConnectedData();
@@ -188,5 +134,36 @@ describe("connection path behavior", () => {
     // From port: (100, 25), To port: (200, 65), dx=100 dy=40.
     // With "vertical", cp1.x should remain aligned to from.x.
     expect(cp1.x).toBeCloseTo(100);
+  });
+
+  it("reads handle offset min/max from settingsManager", async () => {
+    const settingsManager = new SettingsManager({ storage: createMemorySettingsStorage() });
+    settingsManager.setValue("behavior.connectionControlPointRounding", "horizontal");
+    settingsManager.setValue("behavior.connectionHandleOffsetMin", 10);
+    settingsManager.setValue("behavior.connectionHandleOffsetMax", 10);
+
+    const initialData = createConnectedData();
+    const nodeDefinition = createIoNodeDefinition();
+
+    const { container } = render(
+      <NodeEditorCore
+        initialData={initialData}
+        settingsManager={settingsManager}
+        nodeDefinitions={[nodeDefinition]}
+        includeDefaultDefinitions={true}
+      >
+        <NodeCanvas />
+      </NodeEditorCore>,
+    );
+
+    await waitNextFrame();
+    await waitNextFrame();
+
+    const d = getConnectionPathD(container, "c1");
+    const cp1 = parseBezierCp1(d);
+
+    // From port: (100, 25) with "horizontal" and offset=10 -> cp1.x = 110.
+    expect(cp1.x).toBeCloseTo(110);
+    expect(cp1.y).toBeCloseTo(25);
   });
 });

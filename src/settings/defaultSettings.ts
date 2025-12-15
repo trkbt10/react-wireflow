@@ -242,7 +242,7 @@ export const defaultSettings: SettingDefinition[] = [
     description: "How connection curves choose their initial direction from ports",
     category: "behavior",
     type: "select",
-    defaultValue: "snap-90",
+    defaultValue: "port-side",
     options: [
       { value: "snap-90", label: "Snap 90° (dominant axis)" },
       { value: "port-side", label: "Port side (fixed direction)" },
@@ -251,6 +251,30 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "vector", label: "Vector (no snapping)" },
     ],
     order: 6,
+  },
+  {
+    key: "behavior.connectionHandleOffsetMin",
+    label: "Connection Handle Offset Min",
+    description: "Minimum handle offset distance for bezier connections (pixels)",
+    category: "behavior",
+    type: "number",
+    defaultValue: 40,
+    min: 0,
+    max: 400,
+    step: 1,
+    order: 7,
+  },
+  {
+    key: "behavior.connectionHandleOffsetMax",
+    label: "Connection Handle Offset Max",
+    description: "Maximum handle offset distance for bezier connections (pixels)",
+    category: "behavior",
+    type: "number",
+    defaultValue: 120,
+    min: 0,
+    max: 600,
+    step: 1,
+    order: 8,
   },
   {
     key: "behavior.selectionMode",
@@ -263,7 +287,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "click", label: "Click with Modifier" },
       { value: "drag", label: "Drag Selection Box" },
     ],
-    order: 7,
+    order: 9,
   },
   {
     key: "behavior.wheelZoomSensitivity",
@@ -275,7 +299,7 @@ export const defaultSettings: SettingDefinition[] = [
     min: 0.1,
     max: 3,
     step: 0.1,
-    order: 8,
+    order: 10,
   },
   {
     key: "behavior.nodeSearchViewMode",
@@ -288,7 +312,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "list", label: "List" },
       { value: "split", label: "Split Pane" },
     ],
-    order: 9,
+    order: 11,
   },
   {
     key: "behavior.nodeSearchFilterMode",
@@ -301,7 +325,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "filter", label: "Filter (hide non-matching)" },
       { value: "highlight", label: "Highlight (show all, emphasize matches)" },
     ],
-    order: 10,
+    order: 12,
   },
   {
     key: "behavior.nodeSearchMenuWidth",
@@ -312,7 +336,7 @@ export const defaultSettings: SettingDefinition[] = [
     defaultValue: 360,
     min: 280,
     max: 800,
-    order: 11,
+    order: 13,
   },
 
   // Performance settings

@@ -10,11 +10,15 @@ import type {
   SettingsChangeEvent,
   SettingsValidationResult,
   SettingsStorage,
-  BuiltInCategories,
   EditorSettings,
   EditorSettingKey,
 } from "./types";
 import { defaultSettings } from "./defaultSettings";
+import { builtInCategories } from "./builtInCategories";
+import { createLocalSettingsStorage } from "./storages/LocalSettingsStorage";
+
+export { createLocalSettingsStorage } from "./storages/LocalSettingsStorage";
+export { createMemorySettingsStorage } from "./storages/MemorySettingsStorage";
 
 /**
  * Event emitter for settings
@@ -58,138 +62,6 @@ class SettingsEventEmitter {
 }
 
 /**
- * Local storage implementation for settings
- */
-export class LocalSettingsStorage implements SettingsStorage {
-  private prefix: string;
-  private eventEmitter = new SettingsEventEmitter();
-
-  constructor(prefix = "node-editor-settings") {
-    this.prefix = prefix;
-  }
-
-  private getStorageKey(key: string): string {
-    return `${this.prefix}-${key}`;
-  }
-
-  get(key: string): SettingValue | undefined {
-    try {
-      const value = localStorage.getItem(this.getStorageKey(key));
-      return value ? JSON.parse(value) : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  set(key: string, value: SettingValue): void {
-    try {
-      localStorage.setItem(this.getStorageKey(key), JSON.stringify(value));
-      this.eventEmitter.emit("change", { key, value });
-    } catch (error) {
-      console.warn(`Failed to save setting ${key}:`, error);
-    }
-  }
-
-  delete(key: string): void {
-    localStorage.removeItem(this.getStorageKey(key));
-    this.eventEmitter.emit("change", { key, value: undefined });
-  }
-
-  clear(): void {
-    const keys = this.keys();
-    keys.forEach((key) => {
-      localStorage.removeItem(this.getStorageKey(key));
-    });
-  }
-
-  keys(): string[] {
-    const keys: string[] = [];
-    const prefix = `${this.prefix}-`;
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        keys.push(key.substring(prefix.length));
-      }
-    }
-
-    return keys;
-  }
-
-  getMany(keys: string[]): Record<string, SettingValue> {
-    const result: Record<string, SettingValue> = {};
-    keys.forEach((key) => {
-      const value = this.get(key);
-      if (value !== undefined) {
-        result[key] = value;
-      }
-    });
-    return result;
-  }
-
-  setMany(values: Record<string, SettingValue>): void {
-    Object.entries(values).forEach(([key, value]) => {
-      this.set(key, value);
-    });
-  }
-
-  on(event: "change", handler: (key: string, value: SettingValue) => void): () => void {
-    return this.eventEmitter.on(event, (data) => {
-      const changeData = data as { key: string; value: SettingValue };
-      handler(changeData.key, changeData.value);
-    });
-  }
-}
-
-/**
- * Built-in categories
- */
-const builtInCategories: BuiltInCategories = {
-  general: {
-    key: "general",
-    label: "General",
-    description: "General editor settings",
-    order: 1,
-  },
-  appearance: {
-    key: "appearance",
-    label: "Appearance",
-    description: "Visual appearance and theming",
-    order: 2,
-  },
-  behavior: {
-    key: "behavior",
-    label: "Behavior",
-    description: "Editor behavior and interactions",
-    order: 3,
-  },
-  performance: {
-    key: "performance",
-    label: "Performance",
-    description: "Performance and optimization settings",
-    order: 4,
-  },
-  keyboard: {
-    key: "keyboard",
-    label: "Keyboard",
-    description: "Keyboard shortcuts and bindings",
-    order: 5,
-  },
-  plugins: {
-    key: "plugins",
-    label: "Plugins",
-    description: "Plugin management and configuration",
-    order: 6,
-  },
-  advanced: {
-    key: "advanced",
-    label: "Advanced",
-    description: "Advanced settings for power users",
-    order: 7,
-  },
-};
-
-/**
  * Settings Manager constructor options
  */
 export type SettingsManagerOptions = {
@@ -211,7 +83,7 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
 
   constructor(options?: SettingsManagerOptions) {
     super();
-    this.storage = options?.storage || new LocalSettingsStorage();
+    this.storage = options?.storage ?? createLocalSettingsStorage();
 
     // Register built-in categories
     Object.values(builtInCategories).forEach((category) => {

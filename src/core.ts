@@ -79,7 +79,7 @@ export { NodeCanvas } from "./components/canvas/NodeCanvas";
 export type { NodeCanvasProps } from "./components/canvas/NodeCanvas";
 export { defaultEditorGridConfig, defaultEditorGridLayers } from "./config/defaultLayout";
 export { defaultSettings } from "./settings/defaultSettings";
-export { LocalSettingsStorage, SettingsManager } from "./settings/SettingsManager";
+export { createLocalSettingsStorage, SettingsManager } from "./settings/SettingsManager";
 export type { SettingsManagerOptions } from "./settings/SettingsManager";
 export type { EditorSettings, EditorSettingKey } from "./settings/types";
 export type {

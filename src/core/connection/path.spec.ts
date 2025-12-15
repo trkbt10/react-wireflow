@@ -1,7 +1,13 @@
 /**
  * @file Unit tests for connection/path utilities.
  */
-import { calculateConnectionControlPoints, calculateConnectionControlPointsByPortSide, calculateConnectionPath } from "./path";
+import {
+  calculateConnectionControlPoints,
+  calculateConnectionControlPointsByPortSide,
+  calculateConnectionMidpointFromControlPoints,
+  calculateConnectionPath,
+  createPolylinePathModel,
+} from "./path";
 
 describe("connection/path", () => {
   it("uses snap-90 dominant-axis rounding by default (backward compatible)", () => {
@@ -50,5 +56,26 @@ describe("connection/path", () => {
     expect(cp1.y).toBeCloseTo(from.y);
     expect(cp2.x).toBeLessThan(to.x);
     expect(cp2.y).toBeCloseTo(to.y);
+  });
+
+  it("calculates midpoint based on explicit control points", () => {
+    const from = { x: 0, y: 0 };
+    const to = { x: 100, y: 0 };
+    const { cp1, cp2 } = calculateConnectionControlPointsByPortSide(from, to, "right", "left");
+    const mid = calculateConnectionMidpointFromControlPoints(from, cp1, cp2, to);
+    expect(mid.x).toBeCloseTo(50);
+    expect(mid.y).toBeCloseTo(0);
+  });
+
+  it("derives midpoint from a polyline model", () => {
+    const model = createPolylinePathModel([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ]);
+    const mid = model.pointAt(0.5);
+    // Total length is 200; midpoint at length 100 is at (100,0).
+    expect(mid.x).toBeCloseTo(100);
+    expect(mid.y).toBeCloseTo(0);
   });
 });

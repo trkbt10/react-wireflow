@@ -3,17 +3,23 @@
  * Provides configurable connection path calculation (including control point rounding).
  */
 import * as React from "react";
-import { calculateConnectionPath, calculateConnectionPathByPortSide, type ConnectionPathOptions } from "../../core/connection/path";
+import {
+  calculateConnectionControlPointsByPortSide,
+  createBezierConnectionPathModel,
+  createCubicBezierPathModel,
+  createStraightPathModel,
+} from "../../core/connection/path";
 import type {
   ConnectionBehavior,
-  ConnectionPathAlgorithm,
   ConnectionPathCalculationContext,
+  ConnectionPathModel,
 } from "../../types/connectionBehavior";
 import { defaultConnectionBehavior, resolveConnectionValue } from "../../types/connectionBehavior";
 import { useNodeEditor } from "../composed/node-editor/context";
 
 export type ConnectionBehaviorContextValue = {
   behavior: ConnectionBehavior;
+  createPathModel: (ctx: ConnectionPathCalculationContext) => ConnectionPathModel;
   calculatePath: (ctx: ConnectionPathCalculationContext) => string;
 };
 
@@ -25,30 +31,6 @@ export type ConnectionBehaviorProviderProps = {
   children: React.ReactNode;
 };
 
-const calculateStraightPath = (ctx: ConnectionPathCalculationContext): string => {
-  const from = ctx.outputPosition;
-  const to = ctx.inputPosition;
-  return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-};
-
-const calculateBezierPath = (ctx: ConnectionPathCalculationContext, options?: ConnectionPathOptions): string => {
-  return calculateConnectionPath(ctx.outputPosition, ctx.inputPosition, options);
-};
-
-const resolveAlgorithm = (algorithm: ConnectionPathAlgorithm, ctx: ConnectionPathCalculationContext): string => {
-  switch (algorithm.type) {
-    case "custom": {
-      return algorithm.calculatePath(ctx);
-    }
-    case "straight": {
-      return calculateStraightPath(ctx);
-    }
-    case "bezier": {
-      return calculateBezierPath(ctx);
-    }
-  }
-};
-
 export const ConnectionBehaviorProvider: React.FC<ConnectionBehaviorProviderProps> = ({ behavior, children }) => {
   const { settings } = useNodeEditor();
 
@@ -56,40 +38,73 @@ export const ConnectionBehaviorProvider: React.FC<ConnectionBehaviorProviderProp
     return {
       ...defaultConnectionBehavior,
       controlPointRounding: { type: "fixed", value: settings.connectionControlPointRounding },
+      handleOffset: {
+        type: "fixed",
+        value: { min: settings.connectionHandleOffsetMin, max: settings.connectionHandleOffsetMax },
+      },
     };
-  }, [settings.connectionControlPointRounding]);
+  }, [settings.connectionControlPointRounding, settings.connectionHandleOffsetMin, settings.connectionHandleOffsetMax]);
 
   const mergedBehavior = React.useMemo<ConnectionBehavior>(() => {
     return {
       path: behavior?.path ?? baseBehavior.path,
       controlPointRounding: behavior?.controlPointRounding ?? baseBehavior.controlPointRounding,
+      handleOffset: behavior?.handleOffset ?? baseBehavior.handleOffset,
     };
-  }, [behavior?.path, behavior?.controlPointRounding, baseBehavior.path, baseBehavior.controlPointRounding]);
+  }, [
+    behavior?.path,
+    behavior?.controlPointRounding,
+    behavior?.handleOffset,
+    baseBehavior.path,
+    baseBehavior.controlPointRounding,
+    baseBehavior.handleOffset,
+  ]);
 
-  const calculatePath = React.useCallback(
-    (ctx: ConnectionPathCalculationContext): string => {
+  const createPathModel = React.useCallback(
+    (ctx: ConnectionPathCalculationContext): ConnectionPathModel => {
       const algorithm = resolveConnectionValue(mergedBehavior.path, ctx);
-      if (algorithm.type !== "bezier") {
-        return resolveAlgorithm(algorithm, ctx);
+
+      if (algorithm.type === "straight") {
+        return createStraightPathModel(ctx.outputPosition, ctx.inputPosition);
+      }
+
+      if (algorithm.type === "custom") {
+        return algorithm.createPath(ctx);
       }
 
       const rounding = resolveConnectionValue(mergedBehavior.controlPointRounding, ctx);
+      const handleOffset = resolveConnectionValue(mergedBehavior.handleOffset, ctx);
+      const options = { offsetMin: handleOffset.min, offsetMax: handleOffset.max };
+
       if (rounding === "port-side" && ctx.outputPort && ctx.inputPort) {
-        return calculateConnectionPathByPortSide(
+        const { cp1, cp2 } = calculateConnectionControlPointsByPortSide(
           ctx.outputPosition,
           ctx.inputPosition,
           ctx.outputPort.position,
           ctx.inputPort.position,
+          options,
         );
+        return createCubicBezierPathModel(ctx.outputPosition, cp1, cp2, ctx.inputPosition);
       }
-      return calculateBezierPath(ctx, { controlPointRounding: rounding });
+
+      return createBezierConnectionPathModel(ctx.outputPosition, ctx.inputPosition, {
+        controlPointRounding: rounding,
+        ...options,
+      });
     },
     [mergedBehavior],
   );
 
+  const calculatePath = React.useCallback(
+    (ctx: ConnectionPathCalculationContext): string => {
+      return createPathModel(ctx).toPathData();
+    },
+    [createPathModel],
+  );
+
   const value = React.useMemo<ConnectionBehaviorContextValue>(
-    () => ({ behavior: mergedBehavior, calculatePath }),
-    [mergedBehavior, calculatePath],
+    () => ({ behavior: mergedBehavior, createPathModel, calculatePath }),
+    [mergedBehavior, createPathModel, calculatePath],
   );
 
   return <ConnectionBehaviorContext.Provider value={value}>{children}</ConnectionBehaviorContext.Provider>;
@@ -105,4 +120,8 @@ export const useConnectionBehavior = (): ConnectionBehaviorContextValue => {
 
 export const useConnectionPathCalculator = (): ConnectionBehaviorContextValue["calculatePath"] => {
   return useConnectionBehavior().calculatePath;
+};
+
+export const useConnectionPathModelCalculator = (): ConnectionBehaviorContextValue["createPathModel"] => {
+  return useConnectionBehavior().createPathModel;
 };

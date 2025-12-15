@@ -25,6 +25,8 @@ type Settings = {
   nodeSearchFilterMode: NodeSearchFilterMode;
   nodeSearchMenuWidth: number;
   connectionControlPointRounding: ConnectionControlPointRoundingId;
+  connectionHandleOffsetMin: number;
+  connectionHandleOffsetMax: number;
 };
 
 const defaultSettings: Settings = {
@@ -43,7 +45,9 @@ const defaultSettings: Settings = {
   nodeSearchViewMode: "list",
   nodeSearchFilterMode: "filter",
   nodeSearchMenuWidth: 360,
-  connectionControlPointRounding: "snap-90",
+  connectionControlPointRounding: "port-side",
+  connectionHandleOffsetMin: 40,
+  connectionHandleOffsetMax: 120,
 };
 
 function isValidTheme(value: unknown): value is ThemeValue {
@@ -181,6 +185,16 @@ export function useSettings(settingsManager?: SettingsManager): Settings {
         settingsManager,
         "behavior.connectionControlPointRounding",
         defaultSettings.connectionControlPointRounding,
+      ),
+      connectionHandleOffsetMin: getNumberSetting(
+        settingsManager,
+        "behavior.connectionHandleOffsetMin",
+        defaultSettings.connectionHandleOffsetMin,
+      ),
+      connectionHandleOffsetMax: getNumberSetting(
+        settingsManager,
+        "behavior.connectionHandleOffsetMax",
+        defaultSettings.connectionHandleOffsetMax,
       ),
     };
   }, [settingsManager, settingsVersion]);

@@ -5,7 +5,8 @@ import * as React from "react";
 import { NodeEditorCore, createNodeDefinition, type NodeEditorData } from "../../../../../core";
 import { NodeCanvas } from "../../../../../components/canvas/NodeCanvas";
 import { SettingsManager } from "../../../../../settings/SettingsManager";
-import type { SettingValue, SettingsStorage } from "../../../../../settings/types";
+import { createMemorySettingsStorage } from "../../../../../settings/storages/MemorySettingsStorage";
+import { createPolylinePathModel } from "../../../../../core/connection/path";
 import type { ConnectionBehavior, ConnectionControlPointRoundingId } from "../../../../../types/connectionBehavior";
 import { InspectorButtonGroup, InspectorFieldRow, InspectorSection } from "../../../../../inspector";
 import { ExampleLayout } from "../../../shared/parts/ExampleLayout";
@@ -18,61 +19,6 @@ import {
   TwoSideLayoutStack,
 } from "../../../../layouts/TwoSideLayout";
 import styles from "./ConnectionBehaviorExample.module.css";
-
-class MemorySettingsStorage implements SettingsStorage {
-  private values = new Map<string, SettingValue>();
-  private listeners = new Set<(key: string, value: SettingValue) => void>();
-
-  get(key: string): SettingValue | undefined {
-    return this.values.get(key);
-  }
-
-  set(key: string, value: SettingValue): void {
-    this.values.set(key, value);
-    for (const listener of this.listeners) {
-      listener(key, value);
-    }
-  }
-
-  delete(key: string): void {
-    this.values.delete(key);
-    for (const listener of this.listeners) {
-      listener(key, "");
-    }
-  }
-
-  clear(): void {
-    this.values.clear();
-  }
-
-  keys(): string[] {
-    return [...this.values.keys()];
-  }
-
-  getMany(keys: string[]): Record<string, SettingValue> {
-    const result: Record<string, SettingValue> = {};
-    for (const key of keys) {
-      const value = this.values.get(key);
-      if (value !== undefined) {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
-
-  setMany(values: Record<string, SettingValue>): void {
-    for (const [key, value] of Object.entries(values)) {
-      this.set(key, value);
-    }
-  }
-
-  on(_event: "change", handler: (key: string, value: SettingValue) => void): () => void {
-    this.listeners.add(handler);
-    return () => {
-      this.listeners.delete(handler);
-    };
-  }
-}
 
 type ConnectionPathMode = "default-bezier" | "straight" | "custom-elbow";
 
@@ -137,14 +83,14 @@ const initialData: Partial<NodeEditorData> = {
 };
 
 const createSettingsManager = (): SettingsManager => {
-  const storage = new MemorySettingsStorage();
+  const storage = createMemorySettingsStorage();
   return new SettingsManager({ storage });
 };
 
 export const ConnectionBehaviorExample: React.FC = () => {
   const [settingsManager] = React.useState<SettingsManager>(() => createSettingsManager());
   const [pathMode, setPathMode] = React.useState<ConnectionPathMode>("default-bezier");
-  const [rounding, setRounding] = React.useState<ConnectionControlPointRoundingId>("snap-90");
+  const [rounding, setRounding] = React.useState<ConnectionControlPointRoundingId>("port-side");
   const [useContextBasedRounding, setUseContextBasedRounding] = React.useState<boolean>(false);
 
   const isBezierPath = pathMode === "default-bezier";
@@ -179,9 +125,14 @@ export const ConnectionBehaviorExample: React.FC = () => {
         type: "fixed",
         value: {
           type: "custom",
-          calculatePath: ({ outputPosition, inputPosition }) => {
+          createPath: ({ outputPosition, inputPosition }) => {
             const elbowX = (outputPosition.x + inputPosition.x) / 2;
-            return `M ${outputPosition.x} ${outputPosition.y} L ${elbowX} ${outputPosition.y} L ${elbowX} ${inputPosition.y} L ${inputPosition.x} ${inputPosition.y}`;
+            return createPolylinePathModel([
+              { x: outputPosition.x, y: outputPosition.y },
+              { x: elbowX, y: outputPosition.y },
+              { x: elbowX, y: inputPosition.y },
+              { x: inputPosition.x, y: inputPosition.y },
+            ]);
           },
         },
       };

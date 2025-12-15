@@ -4,15 +4,14 @@
  */
 import * as React from "react";
 import type { Connection, Node, Port, Position } from "../../types/core";
-import { calculateConnectionMidpoint } from "../../core/connection/path";
 import { hasAnyPositionChanged, hasAnySizeChanged } from "../../core/geometry/comparators";
 import { hasPortPositionChanged } from "../../core/port/identity/comparators";
 import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePortPosition";
 import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
-import { useConnectionPathData } from "./ConnectionPath";
 import type { ConnectionRenderContext, PortDefinition } from "../../types/NodeDefinition";
 import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
+import { useConnectionPathModelCalculator } from "../../contexts/connection-behavior/context";
 import {
   CONNECTION_APPEARANCES,
   determineConnectionInteractionPhase,
@@ -117,11 +116,27 @@ const ConnectionViewInnerComponent: React.FC<ConnectionViewInnerProps> = ({
     ],
   );
 
-  const pathData = useConnectionPathData(endpoints.outputPosition, endpoints.inputPosition, pathCalculationContext);
-
-  const midAndAngle = React.useMemo(
-    () => calculateConnectionMidpoint(endpoints.outputPosition, endpoints.inputPosition),
-    [endpoints.outputPosition.x, endpoints.outputPosition.y, endpoints.inputPosition.x, endpoints.inputPosition.y],
+  const createPathModel = useConnectionPathModelCalculator();
+  const { pathData, midAndAngle } = React.useMemo(() => {
+    const model = createPathModel({
+      outputPosition: endpoints.outputPosition,
+      inputPosition: endpoints.inputPosition,
+      ...pathCalculationContext,
+    });
+    return { pathData: model.toPathData(), midAndAngle: model.pointAt(0.5) };
+  },
+    [
+      createPathModel,
+      endpoints.outputPosition.x,
+      endpoints.outputPosition.y,
+      endpoints.inputPosition.x,
+      endpoints.inputPosition.y,
+      pathCalculationContext.connection,
+      pathCalculationContext.outputNode,
+      pathCalculationContext.inputNode,
+      pathCalculationContext.outputPort,
+      pathCalculationContext.inputPort,
+    ],
   );
 
   const arrowGeometry = React.useMemo(
