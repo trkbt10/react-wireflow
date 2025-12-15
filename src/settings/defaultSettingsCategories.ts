@@ -1,9 +1,10 @@
 /**
- * @file Built-in settings categories for SettingsManager.
+ * @file Default categories for the SettingsManager.
+ * These categories are for editor settings UI/grouping and are unrelated to node-definition categories (`src/category`).
  */
-import type { BuiltInCategories } from "./types";
+import type { DefaultSettingsCategories } from "./types";
 
-export const builtInCategories: BuiltInCategories = {
+export const defaultSettingsCategories: DefaultSettingsCategories = {
   general: {
     key: "general",
     label: "General",
@@ -47,3 +48,4 @@ export const builtInCategories: BuiltInCategories = {
     order: 7,
   },
 };
+

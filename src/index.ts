@@ -85,9 +85,11 @@ export type {
 // Default configuration surface
 export { defaultEditorGridConfig, defaultEditorGridLayers } from "./config/defaultLayout";
 export { defaultSettings } from "./settings/defaultSettings";
-export { SettingsManager, createLocalSettingsStorage } from "./settings/SettingsManager";
+export { SettingsManager } from "./settings/SettingsManager";
+export { createLocalSettingsStorage } from "./settings/storages/LocalSettingsStorage";
+export { createMemorySettingsStorage } from "./settings/storages/MemorySettingsStorage";
 export type { SettingsManagerOptions } from "./settings/SettingsManager";
-export type { EditorSettings, EditorSettingKey } from "./settings/types";
+export type { EditorSettingKey } from "./settings/types";
 export type {
   CanvasPanActivator,
   ContextMenuRequest,

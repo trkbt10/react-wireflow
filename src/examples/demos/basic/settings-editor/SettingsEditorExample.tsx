@@ -4,7 +4,7 @@
  */
 import * as React from "react";
 import { NodeEditor, SettingsManager, createNodeDefinition } from "../../../../core";
-import type { EditorSettings } from "../../../../settings/types";
+import type { EditorSettingKey, SettingValue } from "../../../../settings/types";
 import type { NodeEditorData } from "../../../../types/core";
 import { PropertySection } from "../../../../components/inspector/parts/PropertySection";
 import { InspectorFieldRow } from "../../../../components/inspector/parts/InspectorFieldRow";
@@ -100,25 +100,67 @@ export const SettingsEditorExample: React.FC = () => {
     return unsubscribe;
   }, [settingsManager]);
 
-  // Helper to get current value
-  const getValue = <K extends keyof EditorSettings>(key: K): EditorSettings[K] => {
-    return settingsManager.getValue(key) as EditorSettings[K];
+  const getValue = (key: EditorSettingKey): SettingValue | undefined => {
+    return settingsManager.getValue(key);
+  };
+
+  const getBoolean = (key: EditorSettingKey, fallback: boolean): boolean => {
+    const value = getValue(key);
+    if (typeof value === "boolean") {
+      return value;
+    }
+    return fallback;
+  };
+
+  const getNumber = (key: EditorSettingKey, fallback: number): number => {
+    const value = getValue(key);
+    if (typeof value === "number") {
+      return value;
+    }
+    return fallback;
+  };
+
+  const getTheme = (key: EditorSettingKey, fallback: "light" | "dark" | "auto"): "light" | "dark" | "auto" => {
+    const value = getValue(key);
+    if (value === "light" || value === "dark" || value === "auto") {
+      return value;
+    }
+    return fallback;
+  };
+
+  const getNodeSearchViewMode = (key: EditorSettingKey, fallback: "list" | "split"): "list" | "split" => {
+    const value = getValue(key);
+    if (value === "list" || value === "split") {
+      return value;
+    }
+    return fallback;
+  };
+
+  const getNodeSearchFilterMode = (
+    key: EditorSettingKey,
+    fallback: "filter" | "highlight",
+  ): "filter" | "highlight" => {
+    const value = getValue(key);
+    if (value === "filter" || value === "highlight") {
+      return value;
+    }
+    return fallback;
   };
 
   // Appearance settings
-  const theme = getValue("appearance.theme");
-  const showGrid = getValue("appearance.showGrid");
-  const gridSize = getValue("appearance.gridSize");
-  const gridOpacity = getValue("appearance.gridOpacity");
-  const showMinimap = getValue("appearance.showMinimap");
-  const showStatusBar = getValue("appearance.showStatusBar");
+  const theme = getTheme("appearance.theme", "light");
+  const showGrid = getBoolean("appearance.showGrid", true);
+  const gridSize = getNumber("appearance.gridSize", 20);
+  const gridOpacity = getNumber("appearance.gridOpacity", 0.3);
+  const showMinimap = getBoolean("appearance.showMinimap", true);
+  const showStatusBar = getBoolean("appearance.showStatusBar", true);
 
   // Behavior settings
-  const smoothAnimations = getValue("behavior.smoothAnimations");
-  const doubleClickToEdit = getValue("behavior.doubleClickToEdit");
-  const nodeSearchViewMode = getValue("behavior.nodeSearchViewMode");
-  const nodeSearchFilterMode = getValue("behavior.nodeSearchFilterMode");
-  const nodeSearchMenuWidth = getValue("behavior.nodeSearchMenuWidth");
+  const smoothAnimations = getBoolean("behavior.smoothAnimations", true);
+  const doubleClickToEdit = getBoolean("behavior.doubleClickToEdit", true);
+  const nodeSearchViewMode = getNodeSearchViewMode("behavior.nodeSearchViewMode", "list");
+  const nodeSearchFilterMode = getNodeSearchFilterMode("behavior.nodeSearchFilterMode", "filter");
+  const nodeSearchMenuWidth = getNumber("behavior.nodeSearchMenuWidth", 360);
 
   return (
     <div className={styles.container}>

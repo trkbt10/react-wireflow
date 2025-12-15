@@ -3,8 +3,7 @@
  * This system provides a flexible way to manage editor settings,
  * user preferences, and configuration options.
  */
-
-import type { Locale } from "../i18n/types";
+import type { defaultSettings } from "./defaultSettings";
 
 /**
  * Setting value types
@@ -98,6 +97,20 @@ export type SettingCategory = {
 };
 
 /**
+ * Default categories for the SettingsManager (settings UI grouping).
+ * This is unrelated to node-definition categories (`src/category`).
+ */
+export type DefaultSettingsCategories = {
+  general: SettingCategory;
+  appearance: SettingCategory;
+  behavior: SettingCategory;
+  performance: SettingCategory;
+  keyboard: SettingCategory;
+  plugins: SettingCategory;
+  advanced: SettingCategory;
+};
+
+/**
  * Settings values object
  */
 export type SettingsValues = Record<string, SettingValue>;
@@ -127,7 +140,7 @@ export type SettingsValidationResult = {
 export type SettingsManager = {
   // Setting definitions
   registerSetting: (setting: SettingDefinition) => void;
-  registerSettings: (settings: SettingDefinition[]) => void;
+  registerSettings: (settings: readonly SettingDefinition[]) => void;
   unregisterSetting: (key: string) => void;
   getSetting: (key: string) => SettingDefinition | undefined;
   getAllSettings: () => Record<string, SettingDefinition>;
@@ -139,17 +152,17 @@ export type SettingsManager = {
   getCategory: (key: string) => SettingCategory | undefined;
   getAllCategories: () => SettingCategory[];
 
-  // Values - type-safe overloads for EditorSettings keys
+  // Values - type-safe overloads for built-in editor setting keys
   getValue: {
-    <K extends EditorSettingKey>(key: K): EditorSettings[K] | undefined;
+    <K extends EditorSettingKey>(key: K): SettingValue | undefined;
     <T = SettingValue>(key: string): T | undefined;
   };
   setValue: {
-    <K extends EditorSettingKey>(key: K, value: EditorSettings[K]): void;
+    <K extends EditorSettingKey>(key: K, value: SettingValue): void;
     (key: string, value: SettingValue): void;
   };
   setValues: {
-    (values: Partial<EditorSettings>): void;
+    (values: Partial<Record<EditorSettingKey, SettingValue>>): void;
     (values: Partial<SettingsValues>): void;
   };
   getAllValues: () => SettingsValues;
@@ -178,92 +191,9 @@ export type SettingsManager = {
 };
 
 /**
- * Built-in setting categories
- */
-export type BuiltInCategories = {
-  general: SettingCategory;
-  appearance: SettingCategory;
-  behavior: SettingCategory;
-  performance: SettingCategory;
-  keyboard: SettingCategory;
-  plugins: SettingCategory;
-  advanced: SettingCategory;
-};
-
-/**
- * Editor-specific settings with type-safe keys
- * Keys match those defined in defaultSettings.ts
- */
-export type EditorSettings = {
-  // General
-  "general.language": Locale;
-  "general.autoSave": boolean;
-  "general.autoSaveInterval": number;
-  "general.confirmBeforeExit": boolean;
-
-  // Appearance
-  "appearance.theme": "light" | "dark" | "auto";
-  "appearance.fontSize": number;
-  "appearance.fontFamily": string;
-  "appearance.showGrid": boolean;
-  "appearance.gridSize": number;
-  "appearance.gridOpacity": number;
-  "appearance.snapToGrid": boolean;
-  "appearance.showMinimap": boolean;
-  "appearance.showStatusBar": boolean;
-  "appearance.showToolbar": boolean;
-  "appearance.canvasBackground": string;
-
-  // Behavior
-  "behavior.doubleClickToEdit": boolean;
-  "behavior.autoConnect": boolean;
-  "behavior.smoothAnimations": boolean;
-  "behavior.dragThreshold": number;
-  "behavior.connectionStyle": "straight" | "curved" | "orthogonal";
-  "behavior.connectionControlPointRounding": "snap-90" | "horizontal" | "vertical" | "vector" | "port-side";
-  "behavior.connectionHandleOffsetMin": number;
-  "behavior.connectionHandleOffsetMax": number;
-  "behavior.selectionMode": "click" | "drag";
-  "behavior.wheelZoomSensitivity": number;
-  "behavior.nodeSearchViewMode": "list" | "split";
-  "behavior.nodeSearchFilterMode": "filter" | "highlight";
-  "behavior.nodeSearchMenuWidth": number;
-
-  // Performance
-  "performance.maxHistorySteps": number;
-  "performance.renderOptimization": boolean;
-  "performance.lazyLoading": boolean;
-  "performance.virtualScrolling": boolean;
-  "performance.maxVisibleNodes": number;
-
-  // Keyboard Shortcuts
-  "keyboard.undo": string;
-  "keyboard.redo": string;
-  "keyboard.selectAll": string;
-  "keyboard.delete": string;
-  "keyboard.copy": string;
-  "keyboard.paste": string;
-  "keyboard.duplicate": string;
-  "keyboard.group": string;
-  "keyboard.save": string;
-
-  // Plugins
-  "plugins.autoUpdate": boolean;
-  "plugins.allowUnsafe": boolean;
-  "plugins.maxMemoryUsage": number;
-
-  // Advanced
-  "advanced.debugMode": boolean;
-  "advanced.showPerformanceMetrics": boolean;
-  "advanced.logLevel": "debug" | "info" | "warn" | "error";
-  "advanced.experimentalFeatures": boolean;
-  "advanced.customCSS": string;
-};
-
-/**
  * Type-safe setting key
  */
-export type EditorSettingKey = keyof EditorSettings;
+export type EditorSettingKey = (typeof defaultSettings)[number]["key"];
 
 /**
  * Settings preset

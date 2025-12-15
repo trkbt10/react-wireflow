@@ -10,15 +10,11 @@ import type {
   SettingsChangeEvent,
   SettingsValidationResult,
   SettingsStorage,
-  EditorSettings,
   EditorSettingKey,
 } from "./types";
 import { defaultSettings } from "./defaultSettings";
-import { builtInCategories } from "./builtInCategories";
+import { defaultSettingsCategories } from "./defaultSettingsCategories";
 import { createLocalSettingsStorage } from "./storages/LocalSettingsStorage";
-
-export { createLocalSettingsStorage } from "./storages/LocalSettingsStorage";
-export { createMemorySettingsStorage } from "./storages/MemorySettingsStorage";
 
 /**
  * Event emitter for settings
@@ -85,8 +81,8 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
     super();
     this.storage = options?.storage ?? createLocalSettingsStorage();
 
-    // Register built-in categories
-    Object.values(builtInCategories).forEach((category) => {
+    // Register default settings categories (for settings UI grouping)
+    Object.values(defaultSettingsCategories).forEach((category) => {
       this.registerCategory(category);
     });
 
@@ -133,7 +129,7 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
     this.emit("setting-registered", { setting });
   }
 
-  registerSettings(settings: SettingDefinition[]): void {
+  registerSettings(settings: readonly SettingDefinition[]): void {
     settings.forEach((setting) => this.registerSetting(setting));
   }
 
@@ -177,13 +173,13 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
   }
 
   // Values - type-safe overloads
-  getValue<K extends EditorSettingKey>(key: K): EditorSettings[K] | undefined;
+  getValue<K extends EditorSettingKey>(key: K): SettingValue | undefined;
   getValue<T = SettingValue>(key: string): T | undefined;
   getValue(key: string): SettingValue | undefined {
     return this.values.get(key);
   }
 
-  setValue<K extends EditorSettingKey>(key: K, value: EditorSettings[K]): void;
+  setValue<K extends EditorSettingKey>(key: K, value: SettingValue): void;
   setValue(key: string, value: SettingValue): void;
   setValue(key: string, value: SettingValue): void {
     const setting = this.settings.get(key);
@@ -217,7 +213,7 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
     this.emit("change", event);
   }
 
-  setValues(values: Partial<EditorSettings>): void;
+  setValues(values: Partial<Record<EditorSettingKey, SettingValue>>): void;
   setValues(values: Partial<SettingsValues>): void;
   setValues(values: Partial<SettingsValues>): void {
     Object.entries(values).forEach(([key, value]) => {
@@ -505,8 +501,7 @@ export class SettingsManager extends SettingsEventEmitter implements ISettingsMa
     this.values.clear();
     this.storage.clear();
 
-    // Re-register built-in categories
-    Object.values(builtInCategories).forEach((category) => {
+    Object.values(defaultSettingsCategories).forEach((category) => {
       this.registerCategory(category);
     });
 

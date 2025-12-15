@@ -57,6 +57,16 @@ export const StatusBar: React.FC<StatusBarProps> = React.memo(({
   const isSaving = isSavingProp ?? editorIsSaving;
   const settingsManager = settingsManagerProp ?? editorSettingsManager;
 
+  const themeLabel = React.useMemo(() => {
+    if (settingsManagerProp) {
+      const v = settingsManagerProp.getValue("appearance.theme");
+      if (v === "light" || v === "dark" || v === "auto") {
+        return v;
+      }
+    }
+    return settings.theme;
+  }, [settingsManagerProp, settings.theme]);
+
   const selectedCounts = useEditorActionSelectionCounts();
   const selectedNodeCount = selectedCounts.selectedNodeCount;
   const selectedConnectionCount = selectedCounts.selectedConnectionCount;
@@ -163,7 +173,10 @@ export const StatusBar: React.FC<StatusBarProps> = React.memo(({
 
       {/* Theme info */}
       {settingsManager && (
-        <StatusSection label="Theme" value={settingsManager.getValue("appearance.theme") || "light"} />
+        <StatusSection
+          label="Theme"
+          value={themeLabel}
+        />
       )}
     </div>
   );
