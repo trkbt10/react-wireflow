@@ -220,6 +220,7 @@ export type EditorSettings = {
   "behavior.smoothAnimations": boolean;
   "behavior.dragThreshold": number;
   "behavior.connectionStyle": "straight" | "curved" | "orthogonal";
+  "behavior.connectionControlPointRounding": "snap-90" | "horizontal" | "vertical" | "vector" | "port-side";
   "behavior.selectionMode": "click" | "drag";
   "behavior.wheelZoomSensitivity": number;
   "behavior.nodeSearchViewMode": "list" | "split";

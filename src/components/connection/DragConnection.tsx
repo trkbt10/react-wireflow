@@ -10,6 +10,7 @@ import { useDynamicConnectionPoint } from "../../contexts/node-ports/hooks/usePo
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
 import { useConnectionPathData } from "./ConnectionPath";
 import type { ConnectionRenderContext } from "../../types/NodeDefinition";
+import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
 import type { Connection, Node as EditorNode, Port as CorePort } from "../../types/core";
 import styles from "./DragConnection.module.css";
 
@@ -225,9 +226,25 @@ const DragConnectionComponent: React.FC = () => {
   const params = connectingParams ?? disconnectingParams;
 
   // Use shared path calculation - must be called before any early returns (Rules of Hooks)
+  const pathCalculationContext = React.useMemo<
+    Omit<ConnectionPathCalculationContext, "outputPosition" | "inputPosition">
+  >(() => {
+    if (!params) {
+      return {};
+    }
+    return {
+      connection: params.connection,
+      outputNode: params.outputNode,
+      inputNode: params.inputNode,
+      outputPort: params.outputPort,
+      inputPort: params.inputPort,
+    };
+  }, [params]);
+
   const pathData = useConnectionPathData(
     params?.endpoints.outputPosition ?? { x: 0, y: 0 },
     params?.endpoints.inputPosition ?? { x: 0, y: 0 },
+    pathCalculationContext,
   );
 
   if (!params) {

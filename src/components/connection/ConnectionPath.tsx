@@ -5,13 +5,16 @@
  */
 import * as React from "react";
 import type { Position } from "../../types/core";
-import { calculateConnectionPath } from "../../core/connection/path";
+import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
+import { useConnectionPathCalculator } from "../../contexts/connection-behavior/context";
 
 export type ConnectionPathProps = {
   /** Output port position */
   outputPosition: Position;
   /** Input port position */
   inputPosition: Position;
+  /** Optional extra context for behavior selection (e.g. based on nodes/ports) */
+  calculationContext?: Omit<ConnectionPathCalculationContext, "outputPosition" | "inputPosition">;
   /** Additional className for the path */
   className?: string;
   /** Inline style for the path */
@@ -27,13 +30,21 @@ export type ConnectionPathProps = {
 export const ConnectionPath: React.FC<ConnectionPathProps> = ({
   outputPosition,
   inputPosition,
+  calculationContext,
   className,
   style,
   dataAttributes,
 }) => {
+  const calculatePath = useConnectionPathCalculator();
+
   const pathData = React.useMemo(
-    () => calculateConnectionPath(outputPosition, inputPosition),
-    [outputPosition.x, outputPosition.y, inputPosition.x, inputPosition.y],
+    () =>
+      calculatePath({
+        outputPosition,
+        inputPosition,
+        ...(calculationContext ?? {}),
+      }),
+    [calculatePath, outputPosition.x, outputPosition.y, inputPosition.x, inputPosition.y, calculationContext],
   );
 
   const dataProps = React.useMemo(() => {
@@ -56,8 +67,19 @@ export const ConnectionPath: React.FC<ConnectionPathProps> = ({
  * Hook to compute path data string from positions.
  * Use this when you need the raw path data without rendering.
  */
-export const useConnectionPathData = (outputPosition: Position, inputPosition: Position): string =>
-  React.useMemo(
-    () => calculateConnectionPath(outputPosition, inputPosition),
-    [outputPosition.x, outputPosition.y, inputPosition.x, inputPosition.y],
+export const useConnectionPathData = (
+  outputPosition: Position,
+  inputPosition: Position,
+  calculationContext?: Omit<ConnectionPathCalculationContext, "outputPosition" | "inputPosition">,
+): string => {
+  const calculatePath = useConnectionPathCalculator();
+  return React.useMemo(
+    () =>
+      calculatePath({
+        outputPosition,
+        inputPosition,
+        ...(calculationContext ?? {}),
+      }),
+    [calculatePath, outputPosition.x, outputPosition.y, inputPosition.x, inputPosition.y, calculationContext],
   );
+};

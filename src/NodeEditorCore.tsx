@@ -31,6 +31,8 @@ import { InteractionSettingsProvider } from "./contexts/interaction-settings/con
 import type { NodeEditorInteractionSettingsPatch } from "./types/interaction";
 import { PortPositionProvider } from "./contexts/node-ports/provider";
 import type { PortPositionBehavior } from "./types/portPosition";
+import { ConnectionBehaviorProvider } from "./contexts/connection-behavior/context";
+import type { ConnectionBehavior } from "./types/connectionBehavior";
 
 export type NodeEditorCoreProps = {
   /** Initial data for uncontrolled mode (like defaultValue) */
@@ -74,6 +76,8 @@ export type NodeEditorCoreProps = {
   interactionSettings?: NodeEditorInteractionSettingsPatch;
   /** Custom behavior for port position calculation */
   portPositionBehavior?: PortPositionBehavior;
+  /** Customizable connection path calculation behavior */
+  connectionBehavior?: Partial<ConnectionBehavior>;
   /** Children to render within all providers */
   children: React.ReactNode;
 };
@@ -106,6 +110,7 @@ export function NodeEditorCore({
   renderers,
   interactionSettings,
   portPositionBehavior,
+  connectionBehavior,
   children,
 }: NodeEditorCoreProps) {
   const mergedRenderers = React.useMemo(
@@ -144,23 +149,25 @@ export function NodeEditorCore({
               autoSaveEnabled={autoSaveEnabled}
               autoSaveInterval={autoSaveInterval}
             >
-              <NodeCanvasProvider>
-                <CanvasInteractionProvider>
-                  <EditorActionStateProvider>
-                    <PortPositionProvider behavior={portPositionBehavior}>
-                      <HistoryProvider maxEntries={historyMaxEntries}>
-                        <InlineEditingProvider>
-                          <KeyboardShortcutProvider>
-                            <InteractionSettingsProvider value={interactionSettings}>
-                              {children}
-                            </InteractionSettingsProvider>
-                          </KeyboardShortcutProvider>
-                        </InlineEditingProvider>
-                      </HistoryProvider>
-                    </PortPositionProvider>
-                  </EditorActionStateProvider>
-                </CanvasInteractionProvider>
-              </NodeCanvasProvider>
+              <ConnectionBehaviorProvider behavior={connectionBehavior}>
+                <NodeCanvasProvider>
+                  <CanvasInteractionProvider>
+                    <EditorActionStateProvider>
+                      <PortPositionProvider behavior={portPositionBehavior}>
+                        <HistoryProvider maxEntries={historyMaxEntries}>
+                          <InlineEditingProvider>
+                            <KeyboardShortcutProvider>
+                              <InteractionSettingsProvider value={interactionSettings}>
+                                {children}
+                              </InteractionSettingsProvider>
+                            </KeyboardShortcutProvider>
+                          </InlineEditingProvider>
+                        </HistoryProvider>
+                      </PortPositionProvider>
+                    </EditorActionStateProvider>
+                  </CanvasInteractionProvider>
+                </NodeCanvasProvider>
+              </ConnectionBehaviorProvider>
             </NodeEditorProvider>
           </ExternalDataProvider>
         </NodeDefinitionProvider>

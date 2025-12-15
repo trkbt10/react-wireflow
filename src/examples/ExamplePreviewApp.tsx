@@ -47,6 +47,7 @@ import { MultiCategoryExample } from "./demos/custom/search/multi-category/Multi
 import { NodeAddMenuExample } from "./demos/custom/menus/node-add-menu/NodeAddMenuExample";
 import { ConnectionRulesExample } from "./demos/custom/connections/connection-rules/ConnectionRulesExample";
 import { GroupScopeExample } from "./demos/custom/connections/group-scope/GroupScopeExample";
+import { ConnectionBehaviorExample } from "./demos/custom/connections/connection-behavior/ConnectionBehaviorExample";
 import { SettingsEditorExample } from "./demos/basic/settings-editor/SettingsEditorExample";
 import { ExampleSelector, type ExampleCategory, type ExampleEntry } from "./components/ExampleSelector";
 import { ThemeSelector } from "./components/ThemeSelector";
@@ -186,6 +187,13 @@ const examples: InternalExampleEntry[] = [
     title: "Connection Rules",
     description: "Demonstrates the 4 ways to customize port connectivity: dataType, canConnect, validateConnection, maxConnections.",
     component: ConnectionRulesExample,
+    category: "custom",
+  },
+  {
+    id: "connection-behavior",
+    title: "Connection Behavior (Rounding & Overrides)",
+    description: "Control 90° snapping (and alternatives) via SettingsManager, and override path/rounding via NodeEditorCore.",
+    component: ConnectionBehaviorExample,
     category: "custom",
   },
   {
@@ -443,7 +451,7 @@ export function ExamplePreviewApp(): React.ReactElement {
       ["custom-port-renderer", "dynamic-port-playground", "absolute-port-placement", "comfyui-layout"].includes(ex.id)
     );
     const customConnections = customExamples.filter((ex) =>
-      ["custom-connector-renderer", "connection-rules", "group-scope-connection"].includes(ex.id)
+      ["custom-connector-renderer", "connection-rules", "connection-behavior", "group-scope-connection"].includes(ex.id)
     );
     const customUI = customExamples.filter((ex) =>
       ["custom-inspector", "node-search-menu", "multi-category", "node-add-menu"].includes(ex.id)

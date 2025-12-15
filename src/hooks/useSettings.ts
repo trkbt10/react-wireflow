@@ -4,6 +4,7 @@
 import * as React from "react";
 import type { SettingsManager } from "../settings/SettingsManager";
 import type { NodeSearchViewMode, NodeSearchFilterMode } from "../types/interaction";
+import type { ConnectionControlPointRoundingId } from "../types/connectionBehavior";
 
 type ThemeValue = "light" | "dark" | "auto";
 
@@ -23,6 +24,7 @@ type Settings = {
   nodeSearchViewMode: NodeSearchViewMode;
   nodeSearchFilterMode: NodeSearchFilterMode;
   nodeSearchMenuWidth: number;
+  connectionControlPointRounding: ConnectionControlPointRoundingId;
 };
 
 const defaultSettings: Settings = {
@@ -41,6 +43,7 @@ const defaultSettings: Settings = {
   nodeSearchViewMode: "list",
   nodeSearchFilterMode: "filter",
   nodeSearchMenuWidth: 360,
+  connectionControlPointRounding: "snap-90",
 };
 
 function isValidTheme(value: unknown): value is ThemeValue {
@@ -53,6 +56,10 @@ function isValidNodeSearchViewMode(value: unknown): value is NodeSearchViewMode 
 
 function isValidNodeSearchFilterMode(value: unknown): value is NodeSearchFilterMode {
   return typeof value === "string" && ["filter", "highlight"].includes(value);
+}
+
+function isValidConnectionControlPointRoundingId(value: unknown): value is ConnectionControlPointRoundingId {
+  return typeof value === "string" && ["snap-90", "horizontal", "vertical", "vector", "port-side"].includes(value);
 }
 
 function getBooleanSetting(settingsManager: SettingsManager, key: string, defaultValue: boolean): boolean {
@@ -91,6 +98,15 @@ function getNodeSearchFilterModeSetting(
 ): NodeSearchFilterMode {
   const value = settingsManager.getValue(key);
   return isValidNodeSearchFilterMode(value) ? value : defaultValue;
+}
+
+function getConnectionControlPointRoundingSetting(
+  settingsManager: SettingsManager,
+  key: string,
+  defaultValue: ConnectionControlPointRoundingId,
+): ConnectionControlPointRoundingId {
+  const value = settingsManager.getValue(key);
+  return isValidConnectionControlPointRoundingId(value) ? value : defaultValue;
 }
 
 export type { Settings };
@@ -160,6 +176,11 @@ export function useSettings(settingsManager?: SettingsManager): Settings {
         settingsManager,
         "behavior.nodeSearchMenuWidth",
         defaultSettings.nodeSearchMenuWidth,
+      ),
+      connectionControlPointRounding: getConnectionControlPointRoundingSetting(
+        settingsManager,
+        "behavior.connectionControlPointRounding",
+        defaultSettings.connectionControlPointRounding,
       ),
     };
   }, [settingsManager, settingsVersion]);

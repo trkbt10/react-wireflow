@@ -12,6 +12,7 @@ import { useNodeDefinitions } from "../../contexts/node-definitions/context";
 import type { ConnectionEndpoints } from "../../core/connection/endpoints";
 import { useConnectionPathData } from "./ConnectionPath";
 import type { ConnectionRenderContext, PortDefinition } from "../../types/NodeDefinition";
+import type { ConnectionPathCalculationContext } from "../../types/connectionBehavior";
 import {
   CONNECTION_APPEARANCES,
   determineConnectionInteractionPhase,
@@ -97,7 +98,26 @@ const ConnectionViewInnerComponent: React.FC<ConnectionViewInnerProps> = ({
     [interactionPhase, adjacency],
   );
 
-  const pathData = useConnectionPathData(endpoints.outputPosition, endpoints.inputPosition);
+  const pathCalculationContext = React.useMemo<
+    Omit<ConnectionPathCalculationContext, "outputPosition" | "inputPosition">
+  >(
+    () => ({
+      connection: renderContext.connection,
+      outputNode: renderContext.fromNode,
+      inputNode: renderContext.toNode,
+      outputPort: renderContext.fromPort,
+      inputPort: renderContext.toPort,
+    }),
+    [
+      renderContext.connection,
+      renderContext.fromNode,
+      renderContext.toNode,
+      renderContext.fromPort,
+      renderContext.toPort,
+    ],
+  );
+
+  const pathData = useConnectionPathData(endpoints.outputPosition, endpoints.inputPosition, pathCalculationContext);
 
   const midAndAngle = React.useMemo(
     () => calculateConnectionMidpoint(endpoints.outputPosition, endpoints.inputPosition),

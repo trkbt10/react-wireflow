@@ -237,6 +237,22 @@ export const defaultSettings: SettingDefinition[] = [
     order: 5,
   },
   {
+    key: "behavior.connectionControlPointRounding",
+    label: "Connection Control Point Rounding",
+    description: "How connection curves choose their initial direction from ports",
+    category: "behavior",
+    type: "select",
+    defaultValue: "snap-90",
+    options: [
+      { value: "snap-90", label: "Snap 90° (dominant axis)" },
+      { value: "port-side", label: "Port side (fixed direction)" },
+      { value: "horizontal", label: "Horizontal" },
+      { value: "vertical", label: "Vertical" },
+      { value: "vector", label: "Vector (no snapping)" },
+    ],
+    order: 6,
+  },
+  {
     key: "behavior.selectionMode",
     label: "Selection Mode",
     description: "How to select multiple nodes",
@@ -247,7 +263,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "click", label: "Click with Modifier" },
       { value: "drag", label: "Drag Selection Box" },
     ],
-    order: 6,
+    order: 7,
   },
   {
     key: "behavior.wheelZoomSensitivity",
@@ -259,7 +275,7 @@ export const defaultSettings: SettingDefinition[] = [
     min: 0.1,
     max: 3,
     step: 0.1,
-    order: 7,
+    order: 8,
   },
   {
     key: "behavior.nodeSearchViewMode",
@@ -272,7 +288,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "list", label: "List" },
       { value: "split", label: "Split Pane" },
     ],
-    order: 8,
+    order: 9,
   },
   {
     key: "behavior.nodeSearchFilterMode",
@@ -285,7 +301,7 @@ export const defaultSettings: SettingDefinition[] = [
       { value: "filter", label: "Filter (hide non-matching)" },
       { value: "highlight", label: "Highlight (show all, emphasize matches)" },
     ],
-    order: 9,
+    order: 10,
   },
   {
     key: "behavior.nodeSearchMenuWidth",
@@ -296,7 +312,7 @@ export const defaultSettings: SettingDefinition[] = [
     defaultValue: 360,
     min: 280,
     max: 800,
-    order: 10,
+    order: 11,
   },
 
   // Performance settings
