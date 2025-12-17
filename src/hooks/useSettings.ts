@@ -20,6 +20,8 @@ type Settings = {
   fontSize: number;
   gridSize: number;
   gridOpacity: number;
+  gridVisibilityThreshold: number;
+  portLabelVisibilityThreshold: number;
   canvasBackground: string;
   nodeSearchViewMode: NodeSearchViewMode;
   nodeSearchFilterMode: NodeSearchFilterMode;
@@ -41,6 +43,8 @@ const defaultSettings: Settings = {
   fontSize: 14,
   gridSize: 20,
   gridOpacity: 0.3,
+  gridVisibilityThreshold: 0.3,
+  portLabelVisibilityThreshold: 0.5,
   canvasBackground: "#ffffff",
   nodeSearchViewMode: "list",
   nodeSearchFilterMode: "filter",
@@ -161,6 +165,16 @@ export function useSettings(settingsManager?: SettingsManager): Settings {
       fontSize: getNumberSetting(settingsManager, "appearance.fontSize", defaultSettings.fontSize),
       gridSize: getNumberSetting(settingsManager, "appearance.gridSize", defaultSettings.gridSize),
       gridOpacity: getNumberSetting(settingsManager, "appearance.gridOpacity", defaultSettings.gridOpacity),
+      gridVisibilityThreshold: getNumberSetting(
+        settingsManager,
+        "appearance.gridVisibilityThreshold",
+        defaultSettings.gridVisibilityThreshold,
+      ),
+      portLabelVisibilityThreshold: getNumberSetting(
+        settingsManager,
+        "appearance.portLabelVisibilityThreshold",
+        defaultSettings.portLabelVisibilityThreshold,
+      ),
       canvasBackground: getStringSetting(
         settingsManager,
         "appearance.canvasBackground",

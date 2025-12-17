@@ -112,6 +112,8 @@ export type PortRenderContext = {
   isHovered: boolean;
   /** Whether this port has any connections */
   isConnected: boolean;
+  /** Whether the port label should be visible (based on zoom threshold) */
+  showLabel: boolean;
   /** Port position information */
   position?: {
     x: number;

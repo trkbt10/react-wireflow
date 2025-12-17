@@ -38,6 +38,8 @@ export type NodeViewContainerProps = {
   nodeRenderer?: (props: NodeRendererProps) => React.ReactNode;
   externalData?: unknown;
   onUpdateNode?: (updates: Partial<Node>) => void;
+  /** Port label visibility - calculated at NodeLayer level for performance */
+  showPortLabels?: boolean;
 };
 
 const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
@@ -59,6 +61,7 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
   connectedPortIds,
   connectablePorts,
   candidatePortId,
+  showPortLabels,
 }) => {
   const { actions: nodeEditorActions, getNodePorts, getNodeById } = useNodeEditorApi();
   // Use split hooks for better performance
@@ -224,6 +227,7 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
       connectedPortIds={connectedPortIds}
       connectablePorts={connectablePorts}
       candidatePortId={candidatePortId}
+      showPortLabels={showPortLabels}
     />
   );
 };

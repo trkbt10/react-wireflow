@@ -66,6 +66,8 @@ export type NodeViewPresenterProps = {
   connectedPortIds?: ReadonlySet<string>;
   connectablePorts?: ConnectablePortsResult;
   candidatePortId?: string;
+  /** Control visibility of port labels. When undefined, derived from zoom level. */
+  showPortLabels?: boolean;
 };
 
 const DEBUG_NODEVIEW_PRESENTER_RERENDERS = false;
@@ -109,6 +111,7 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
   connectedPortIds,
   connectablePorts,
   candidatePortId,
+  showPortLabels,
 }) => {
   const nodeRef = React.useRef<HTMLDivElement>(null);
   const lastTransformRef = React.useRef<Position | null>(null);
@@ -267,6 +270,7 @@ const NodeViewPresenterComponent: React.FC<NodeViewPresenterProps> = ({
         connectablePorts={connectablePorts}
         connectingPortId={connectingPortId}
         candidatePortId={candidatePortId}
+        showLabels={showPortLabels}
       />
 
       {isSelected && !node.locked && (
@@ -387,6 +391,11 @@ const arePresenterPropsEqual = (
 
   if (!areExternalDataStatesEqual(prevProps.externalDataState, nextProps.externalDataState)) {
     debugLog("externalDataState changed");
+    return false;
+  }
+
+  if (prevProps.showPortLabels !== nextProps.showPortLabels) {
+    debugLog("showPortLabels changed");
     return false;
   }
 

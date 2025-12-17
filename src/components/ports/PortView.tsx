@@ -45,6 +45,12 @@ export type PortViewProps = {
    * Visual: inner circle changes to success color (green)
    */
   isConnected?: boolean;
+  /**
+   * Control visibility of port label.
+   * When false, label is hidden (e.g., when zoomed out).
+   * Defaults to true.
+   */
+  showLabel?: boolean;
 };
 
 /**
@@ -64,6 +70,7 @@ export const PortView: React.FC<PortViewProps> = ({
   isCandidate = false,
   isHovered = false,
   isConnected = false,
+  showLabel = true,
 }) => {
   const resizeOverride = useCanvasInteractionSelector(
     (state) => {
@@ -180,14 +187,14 @@ export const PortView: React.FC<PortViewProps> = ({
         title={port.label}
       >
         <div className={styles.portInner} />
-        {port.label && (
+        {port.label && showLabel && (
           <span className={styles.portLabel} data-port-label-position={port.position}>
             {port.label}
           </span>
         )}
       </div>
     ),
-    [port, isConnecting, isConnectable, isCandidate, isHovered, isConnected, portPositionStyle],
+    [port, isConnecting, isConnectable, isCandidate, isHovered, isConnected, portPositionStyle, showLabel],
   );
 
   // Check if there's a custom renderer
@@ -204,6 +211,7 @@ export const PortView: React.FC<PortViewProps> = ({
       isCandidate,
       isHovered,
       isConnected,
+      showLabel,
       position: portPosition
         ? {
             x: portPosition.renderPosition.x,

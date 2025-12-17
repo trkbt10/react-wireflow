@@ -13,11 +13,13 @@ import {
   useDragNodeIdsSets,
 } from "../../../contexts/composed/canvas/interaction/context";
 import {
+  useNodeEditor,
   useNodeEditorConnectedPortIdsByNode,
   useNodeEditorConnectedPorts,
   useNodeEditorSelector,
   useNodeEditorSortedNodeIds,
 } from "../../../contexts/composed/node-editor/context";
+import { useNodeCanvasViewportScale } from "../../../contexts/composed/canvas/viewport/context";
 import { useGroupManagement } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { useNodeResize } from "../../../contexts/composed/canvas/interaction/hooks/useNodeResize";
 import { useVisibleNodes } from "../../../contexts/composed/canvas/viewport/hooks/useVisibleNodes";
@@ -58,6 +60,7 @@ type NodeItemProps = {
   candidatePortIdForNode?: string;
   connectedPortIdsByNode: ReadonlyMap<string, ReadonlySet<string>>;
   NodeComponent: React.ComponentType<NodeViewProps>;
+  showPortLabels: boolean;
 };
 
 const NodeItemComponent: React.FC<NodeItemProps> = ({
@@ -79,6 +82,7 @@ const NodeItemComponent: React.FC<NodeItemProps> = ({
   candidatePortIdForNode,
   connectedPortIdsByNode,
   NodeComponent,
+  showPortLabels,
 }) => {
   const node = useNodeEditorSelector((state) => state.nodes[nodeId], { areEqual: (a, b) => a === b });
   if (!node) {
@@ -104,6 +108,7 @@ const NodeItemComponent: React.FC<NodeItemProps> = ({
       hoveredPort={hoveredPortForNode}
       connectedPortIds={connectedPortIdsByNode.get(node.id)}
       candidatePortId={candidatePortIdForNode}
+      showPortLabels={showPortLabels}
     />
   );
 };
@@ -125,6 +130,11 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   const connectionDragMeta = useCanvasInteractionConnectionDragMeta();
   const gridSettings = useNodeCanvasGridSettings();
   const { node: NodeComponent } = useRenderers();
+  const { settings } = useNodeEditor();
+  const scale = useNodeCanvasViewportScale();
+
+  // Calculate showPortLabels once for all nodes
+  const showPortLabels = scale >= settings.portLabelVisibilityThreshold;
 
   // Initialize hooks
   useNodeResize({
@@ -237,6 +247,7 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
             candidatePortIdForNode={candidatePortIdForNode}
             connectedPortIdsByNode={connectedPortIdsByNode}
             NodeComponent={NodeComponent}
+            showPortLabels={showPortLabels}
           />
         );
       })}

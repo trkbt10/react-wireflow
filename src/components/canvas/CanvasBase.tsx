@@ -4,6 +4,7 @@
 import * as React from "react";
 import { useNodeCanvas } from "../../contexts/composed/canvas/viewport/context";
 import { useEditorActionState } from "../../contexts/composed/EditorActionStateContext";
+import { useNodeEditor } from "../../contexts/composed/node-editor/context";
 import { applyZoomDelta } from "../../utils/zoomUtils";
 import { SelectionBox } from "./SelectionBox";
 import styles from "./CanvasBase.module.css";
@@ -40,6 +41,7 @@ const hasNodePayload = (event: React.DragEvent): boolean => {
 export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, showGrid, onNodeDrop }) => {
   const { state: canvasState, actions: canvasActions, canvasRef, utils, setContainerElement } = useNodeCanvas();
   const { actions: actionActions } = useEditorActionState();
+  const { settings } = useNodeEditor();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const rawGridPatternId = React.useId();
   const gridPatternId = React.useMemo(() => rawGridPatternId.replace(/[^a-zA-Z0-9_-]/g, "_"), [rawGridPatternId]);
@@ -52,7 +54,9 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({ children, className, sho
     return () => setContainerElement(null);
   }, [setContainerElement]);
 
-  const shouldShowGrid = showGrid ?? canvasState.gridSettings.showGrid;
+  const currentScale = canvasState.viewport.scale;
+  const shouldShowGrid =
+    (showGrid ?? canvasState.gridSettings.showGrid) && currentScale >= settings.gridVisibilityThreshold;
 
   // Canvas transform based on viewport - optimized string creation
   const canvasTransform = React.useMemo(() => {

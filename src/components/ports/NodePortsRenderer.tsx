@@ -8,7 +8,37 @@ import { isPortConnectable } from "../../core/port/connectivity/connectableTypes
 import { PortView } from "./PortView";
 import { useOptionalRenderers } from "../../contexts/RendererContext";
 import { hasPortIdChanged } from "../../core/port/identity/comparators";
+import { NodeCanvasContext } from "../../contexts/composed/canvas/viewport/context";
+import { NodeEditorContext } from "../../contexts/composed/node-editor/context";
+import { useExternalStoreSelector } from "../../hooks/useExternalStoreSelector";
 import styles from "./NodePortsRenderer.module.css";
+
+// Stable fallback functions for when context is not available
+const noopUnsubscribe = () => {};
+const noopSubscribe = () => noopUnsubscribe;
+const defaultGetState = () => ({ viewport: { scale: 1 } });
+const selectScale = (state: { viewport: { scale: number } }) => state.viewport.scale;
+
+/**
+ * Hook to determine if port labels should be visible based on zoom level.
+ * Returns true (show labels) if context is not available, for backwards compatibility.
+ */
+const useShowPortLabels = (): boolean => {
+  const canvasContext = React.useContext(NodeCanvasContext);
+  const editorContext = React.useContext(NodeEditorContext);
+
+  const scale = useExternalStoreSelector(
+    canvasContext?.store.subscribe ?? noopSubscribe,
+    canvasContext?.store.getState ?? defaultGetState,
+    selectScale,
+  );
+
+  if (!canvasContext || !editorContext) {
+    return true;
+  }
+
+  return scale >= editorContext.settings.portLabelVisibilityThreshold;
+};
 
 export type NodePortsRendererProps = {
   ports: Port[];
@@ -26,9 +56,10 @@ export type NodePortsRendererProps = {
 };
 
 /**
- * Renders ports for a node
+ * Pure component that renders ports for a node.
+ * Does not subscribe to any context - relies on parent to provide showLabels.
  */
-const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
+const NodePortsRendererPure: React.FC<NodePortsRendererProps & { showLabels: boolean }> = ({
   ports,
   onPortPointerDown,
   onPortPointerUp,
@@ -41,6 +72,7 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
   connectablePorts,
   connectingPortId,
   candidatePortId,
+  showLabels,
 }) => {
   const renderers = useOptionalRenderers();
   const PortComponent = renderers?.port ?? PortView;
@@ -68,6 +100,7 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
             isCandidate={candidatePortId === port.id}
             isHovered={hoveredPort?.id === port.id}
             isConnected={connectedPortIds?.has(port.id)}
+            showLabel={showLabels}
           />
         );
       })}
@@ -75,11 +108,31 @@ const NodePortsRendererComponent: React.FC<NodePortsRendererProps> = ({
   );
 };
 
+/**
+ * Wrapper component that derives showLabels from context.
+ * Use this when you need automatic zoom-based label visibility.
+ */
+const NodePortsRendererWithAutoLabels: React.FC<NodePortsRendererProps> = (props) => {
+  const showLabels = useShowPortLabels();
+  return <NodePortsRendererPure {...props} showLabels={showLabels} />;
+};
+
 // Temporary debug flag - set to true to enable detailed re-render logging
 const DEBUG_NODEPORTSRENDERER_RERENDERS = false;
 
+// Props type with optional showLabels for backwards compatibility
+export type NodePortsRendererPropsWithLabels = NodePortsRendererProps & { showLabels?: boolean };
+
 // Memoized version with custom comparison
-export const NodePortsRenderer = React.memo(NodePortsRendererComponent, (prevProps, nextProps) => {
+export const NodePortsRenderer = React.memo(
+  (props: NodePortsRendererPropsWithLabels) => {
+    // Use showLabels from props if provided, otherwise derive from context
+    if (props.showLabels !== undefined) {
+      return <NodePortsRendererPure {...props} showLabels={props.showLabels} />;
+    }
+    return <NodePortsRendererWithAutoLabels {...props} />;
+  },
+  (prevProps: NodePortsRendererPropsWithLabels, nextProps: NodePortsRendererPropsWithLabels) => {
   // Get nodeId for debugging (from first port if available)
   const nodeId = prevProps.ports?.[0]?.nodeId || nextProps.ports?.[0]?.nodeId || "unknown";
   const debugLog = (reason: string, details?: Record<string, unknown>) => {
@@ -128,10 +181,15 @@ export const NodePortsRenderer = React.memo(NodePortsRendererComponent, (prevPro
     });
     return false;
   }
+  if (prevProps.showLabels !== nextProps.showLabels) {
+    debugLog("showLabels changed", { prev: prevProps.showLabels, next: nextProps.showLabels });
+    return false;
+  }
 
   // Event handlers are assumed to be stable (useCallback)
   if (DEBUG_NODEPORTSRENDERER_RERENDERS) {
     console.log(`[NodePortsRenderer:${nodeId}] Skipped re-render (props are equal)`);
   }
   return true;
-});
+},
+);
