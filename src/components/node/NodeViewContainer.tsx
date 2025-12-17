@@ -113,7 +113,7 @@ const NodeViewContainerComponent: React.FC<NodeViewContainerProps> = ({
       return [];
     }
     return getNodePorts(node.id) || [];
-  }, [getNodePorts, node.id, isUnknownType]);
+  }, [getNodePorts, isUnknownType, node]);
 
   const isEditingTitle = isEditing(node.id, "title");
 

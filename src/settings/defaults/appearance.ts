@@ -153,5 +153,17 @@ export const appearanceSettings = [
     defaultValue: "#ffffff",
     order: 13,
   },
+  {
+    key: "appearance.canvasSnapshotThreshold",
+    label: "Canvas Snapshot Threshold",
+    description: "Freeze canvas rendering when zoom level is below this value for better performance",
+    category: "appearance",
+    type: "range",
+    defaultValue: 0.3,
+    min: 0.01,
+    max: 1.0,
+    step: 0.05,
+    order: 14,
+  },
 ] as const satisfies readonly SettingDefinition[];
 

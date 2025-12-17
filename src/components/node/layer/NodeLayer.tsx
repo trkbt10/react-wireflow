@@ -19,7 +19,7 @@ import {
   useNodeEditorSelector,
   useNodeEditorSortedNodeIds,
 } from "../../../contexts/composed/node-editor/context";
-import { useNodeCanvasViewportScale } from "../../../contexts/composed/canvas/viewport/context";
+import { useNodeCanvasViewportScale, useNodeCanvasPanActive } from "../../../contexts/composed/canvas/viewport/context";
 import { useGroupManagement } from "../../../contexts/composed/node-editor/hooks/useGroupManagement";
 import { useNodeResize } from "../../../contexts/composed/canvas/interaction/hooks/useNodeResize";
 import { useVisibleNodes } from "../../../contexts/composed/canvas/viewport/hooks/useVisibleNodes";
@@ -136,6 +136,11 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   // Calculate showPortLabels once for all nodes
   const showPortLabels = scale >= settings.portLabelVisibilityThreshold;
 
+  // Determine snapshot mode for GPU optimization
+  // Active when: low zoom level OR during panning (for smoother pan at any zoom)
+  const isPanning = useNodeCanvasPanActive();
+  const isSnapshotMode = scale < settings.canvasSnapshotThreshold || isPanning;
+
   // Initialize hooks
   useNodeResize({
     minWidth: 100,
@@ -208,49 +213,53 @@ const NodeLayerComponent: React.FC<NodeLayerProps> = ({ doubleClickToEdit }) => 
   const selectedNodeIdsSet = useSelectedNodeIdsSet();
   const dragNodeIdsSets = useDragNodeIdsSets();
 
+  const nodeElements = visibleNodeIds.map((nodeId) => {
+    // O(1) lookup using shared Sets from context
+    const isDirectlyDragging = dragNodeIdsSets?.directlyDraggedNodeIds.has(nodeId) ?? false;
+    const isInDragState = isDirectlyDragging || (dragNodeIdsSets?.affectedChildNodeIds.has(nodeId) ?? false);
+    const dragOffset = isInDragState && dragState ? dragState.offset : undefined;
+
+    const hoveredPortForNode = hoveredPort?.nodeId === nodeId ? hoveredPort : undefined;
+
+    const connectingPortForNode =
+      connectionDragMeta?.fromPort.nodeId === nodeId ? connectionDragMeta.fromPort : undefined;
+
+    const candidatePortIdForNode =
+      connectionDragMeta?.candidatePortNodeId === nodeId ? connectionDragMeta.candidatePortId ?? undefined : undefined;
+
+    const connectablePortsForNode = connectableNodeIds.has(nodeId) ? connectablePorts : EMPTY_CONNECTABLE_PORTS;
+
+    return (
+      <NodeItem
+        key={nodeId}
+        nodeId={nodeId}
+        isSelected={selectedNodeIdsSet.has(nodeId)}
+        isDragging={isDirectlyDragging}
+        dragOffset={dragOffset}
+        onNodePointerDown={onNodePointerDown}
+        onNodeContextMenu={onNodeContextMenu}
+        onPortPointerDown={onPortPointerDown}
+        onPortPointerUp={onPortPointerUp}
+        onPortPointerEnter={onPortPointerEnter}
+        onPortPointerMove={onPortPointerMove}
+        onPortPointerLeave={onPortPointerLeave}
+        onPortPointerCancel={onPortPointerCancel}
+        connectablePortsForNode={connectablePortsForNode}
+        connectingPortForNode={connectingPortForNode}
+        hoveredPortForNode={hoveredPortForNode}
+        candidatePortIdForNode={candidatePortIdForNode}
+        connectedPortIdsByNode={connectedPortIdsByNode}
+        NodeComponent={NodeComponent}
+        showPortLabels={showPortLabels}
+      />
+    );
+  });
+
   return (
     <div className={styles.nodeLayer} data-node-layer>
-      {visibleNodeIds.map((nodeId) => {
-        // O(1) lookup using shared Sets from context
-        const isDirectlyDragging = dragNodeIdsSets?.directlyDraggedNodeIds.has(nodeId) ?? false;
-        const isInDragState = isDirectlyDragging || (dragNodeIdsSets?.affectedChildNodeIds.has(nodeId) ?? false);
-        const dragOffset = isInDragState && dragState ? dragState.offset : undefined;
-
-        const hoveredPortForNode = hoveredPort?.nodeId === nodeId ? hoveredPort : undefined;
-
-        const connectingPortForNode =
-          connectionDragMeta?.fromPort.nodeId === nodeId ? connectionDragMeta.fromPort : undefined;
-
-        const candidatePortIdForNode =
-          connectionDragMeta?.candidatePortNodeId === nodeId ? connectionDragMeta.candidatePortId ?? undefined : undefined;
-
-        const connectablePortsForNode = connectableNodeIds.has(nodeId) ? connectablePorts : EMPTY_CONNECTABLE_PORTS;
-
-        return (
-          <NodeItem
-            key={nodeId}
-            nodeId={nodeId}
-            isSelected={selectedNodeIdsSet.has(nodeId)}
-            isDragging={isDirectlyDragging}
-            dragOffset={dragOffset}
-            onNodePointerDown={onNodePointerDown}
-            onNodeContextMenu={onNodeContextMenu}
-            onPortPointerDown={onPortPointerDown}
-            onPortPointerUp={onPortPointerUp}
-            onPortPointerEnter={onPortPointerEnter}
-            onPortPointerMove={onPortPointerMove}
-            onPortPointerLeave={onPortPointerLeave}
-            onPortPointerCancel={onPortPointerCancel}
-            connectablePortsForNode={connectablePortsForNode}
-            connectingPortForNode={connectingPortForNode}
-            hoveredPortForNode={hoveredPortForNode}
-            candidatePortIdForNode={candidatePortIdForNode}
-            connectedPortIdsByNode={connectedPortIdsByNode}
-            NodeComponent={NodeComponent}
-            showPortLabels={showPortLabels}
-          />
-        );
-      })}
+      <div className={styles.snapshotWrapper} data-snapshot-mode={isSnapshotMode}>
+        {nodeElements}
+      </div>
     </div>
   );
 };

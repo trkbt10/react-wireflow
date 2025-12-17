@@ -1,0 +1,70 @@
+.canvas {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hint {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--ne-text-secondary);
+  line-height: 1.5;
+}
+
+.hint p {
+  margin: 0 0 8px 0;
+}
+
+.hint p:last-child {
+  margin-bottom: 0;
+}
+
+.regenerateButton {
+  padding: 6px 12px;
+  border: 1px solid var(--ne-border);
+  border-radius: 4px;
+  background: var(--ne-surface);
+  color: var(--ne-text);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s;
+}
+
+.regenerateButton:hover {
+  background: var(--ne-surface-hover);
+}
+
+.regenerateButton:active {
+  background: var(--ne-surface-active);
+}
+
+.zoomIndicator {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--ne-surface, rgba(255, 255, 255, 0.9));
+  border: 1px solid var(--ne-border, rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.zoomValue {
+  font-weight: 600;
+  min-width: 40px;
+}
+
+.snapshotActive {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.snapshotInactive {
+  color: var(--ne-text-secondary, #666);
+}

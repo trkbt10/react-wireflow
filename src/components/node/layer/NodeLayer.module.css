@@ -7,3 +7,14 @@
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Wrapper layer for all nodes - enables batch GPU optimization */
+.snapshotWrapper {
+  /* No constraints by default - allows nodes to render anywhere */
+}
+
+/* GPU optimization for low zoom levels - rasterizes entire node layer for better performance */
+.snapshotWrapper[data-snapshot-mode="true"] {
+  will-change: transform;
+  transform: translateZ(0);
+}

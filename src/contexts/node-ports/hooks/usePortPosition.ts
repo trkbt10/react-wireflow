@@ -51,11 +51,14 @@ export function useDynamicPortPosition(
   const { registry } = useNodeDefinitions();
   const nodePorts = React.useMemo(() => {
     try {
+      if (!currentNode) {
+        return [];
+      }
       return getNodePorts(nodeId);
     } catch {
       return [];
     }
-  }, [getNodePorts, nodeId]);
+  }, [currentNode?.data, currentNode?.type, getNodePorts, nodeId]);
   const nodeDefinition = React.useMemo(
     () => (currentNode ? registry.get(currentNode.type) : undefined),
     [registry, currentNode],

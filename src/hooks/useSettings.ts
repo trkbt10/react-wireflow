@@ -22,6 +22,7 @@ type Settings = {
   gridOpacity: number;
   gridVisibilityThreshold: number;
   portLabelVisibilityThreshold: number;
+  canvasSnapshotThreshold: number;
   canvasBackground: string;
   nodeSearchViewMode: NodeSearchViewMode;
   nodeSearchFilterMode: NodeSearchFilterMode;
@@ -45,6 +46,7 @@ const defaultSettings: Settings = {
   gridOpacity: 0.3,
   gridVisibilityThreshold: 0.3,
   portLabelVisibilityThreshold: 0.5,
+  canvasSnapshotThreshold: 0.3,
   canvasBackground: "#ffffff",
   nodeSearchViewMode: "list",
   nodeSearchFilterMode: "filter",
@@ -174,6 +176,11 @@ export function useSettings(settingsManager?: SettingsManager): Settings {
         settingsManager,
         "appearance.portLabelVisibilityThreshold",
         defaultSettings.portLabelVisibilityThreshold,
+      ),
+      canvasSnapshotThreshold: getNumberSetting(
+        settingsManager,
+        "appearance.canvasSnapshotThreshold",
+        defaultSettings.canvasSnapshotThreshold,
       ),
       canvasBackground: getStringSetting(
         settingsManager,

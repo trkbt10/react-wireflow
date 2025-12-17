@@ -639,6 +639,20 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
 
     const didNodesChange = last.nodes !== nextNodes;
     if (didNodesChange) {
+      const previousNodes = last.nodes ?? {};
+      const removedNodeIds = Object.keys(previousNodes).filter(
+        (nodeId) => !Object.prototype.hasOwnProperty.call(nextNodes, nodeId),
+      );
+      const changedNodeIds = Object.keys(nextNodes).filter((nodeId) => previousNodes[nodeId] !== nextNodes[nodeId]);
+      const affectsPorts = removedNodeIds.length > 0 || changedNodeIds.length > 0;
+
+      // Controlled `data` updates bypass dispatch, so invalidate per-node port caches here.
+      if (affectsPorts) {
+        [...removedNodeIds, ...changedNodeIds].forEach((nodeId) => {
+          portResolverRef.current.clearNodeCache(nodeId);
+        });
+      }
+
       // In controlled mode we don't have actions; validate existing order cheaply and only re-sort if needed.
       const existing = sortedNodeIdsRef.current;
       const isOrderStillValid = (() => {
@@ -668,11 +682,36 @@ export const NodeEditorProvider: React.FC<NodeEditorProviderProps> = ({
           notifySortedNodeIdsSubscribers();
         }
       }
+
+      if (affectsPorts || didConnectionsChange) {
+        notifyChangeSubscribers({
+          action: nodeEditorActions.setNodeData(stateRef.current),
+          changedNodeIds,
+          removedNodeIds,
+          fullResync: false,
+          affectsGeometry: true,
+          affectsPorts,
+          affectsNodeOrder: true,
+          affectsConnections: didConnectionsChange,
+        });
+      }
+    } else if (didConnectionsChange) {
+      notifyChangeSubscribers({
+        action: nodeEditorActions.setNodeData(stateRef.current),
+        changedNodeIds: [],
+        removedNodeIds: [],
+        fullResync: false,
+        affectsGeometry: false,
+        affectsPorts: false,
+        affectsNodeOrder: false,
+        affectsConnections: true,
+      });
     }
 
     lastControlledDerivedStateRef.current = { nodes: nextNodes, connections: nextConnections };
   }, [
     isControlled,
+    notifyChangeSubscribers,
     notifyConnectionDerivedSubscribers,
     notifySortedNodeIdsSubscribers,
     state.connections,

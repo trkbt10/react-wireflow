@@ -53,23 +53,30 @@ export function createCachedPortResolver(): PortResolver & {
   clearCache: () => void;
   clearNodeCache: (nodeId: NodeId) => void;
 } {
-  // Cache for resolved ports per node
-  const portCache = new Map<NodeId, Port[]>();
+  type PortCacheEntry = {
+    nodeType: string;
+    nodeData: Node["data"];
+    ports: Port[];
+  };
+
+  // Cache for resolved ports per node (keyed by nodeId, invalidated when node.type or node.data reference changes)
+  const portCache = new Map<NodeId, PortCacheEntry>();
 
   return {
     getNodePorts(node: Node, definition: NodeDefinition): Port[] {
       const cacheKey = node.id;
 
       // Check cache first
-      if (portCache.has(cacheKey)) {
-        return portCache.get(cacheKey)!;
+      const cached = portCache.get(cacheKey);
+      if (cached && cached.nodeType === node.type && cached.nodeData === node.data) {
+        return cached.ports;
       }
 
       // Resolve ports
       const ports = deriveNodePorts(node, definition);
 
       // Cache the result
-      portCache.set(cacheKey, ports);
+      portCache.set(cacheKey, { nodeType: node.type, nodeData: node.data, ports });
 
       return ports;
     },

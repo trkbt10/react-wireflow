@@ -49,6 +49,7 @@ import { ConnectionRulesExample } from "./demos/custom/connections/connection-ru
 import { GroupScopeExample } from "./demos/custom/connections/group-scope/GroupScopeExample";
 import { ConnectionBehaviorExample } from "./demos/custom/connections/connection-behavior/ConnectionBehaviorExample";
 import { SettingsEditorExample } from "./demos/basic/settings-editor/SettingsEditorExample";
+import { FractalNodeStressTest } from "./demos/advanced/performance/FractalNodeStressTest";
 import { ExampleSelector, type ExampleCategory, type ExampleEntry } from "./components/ExampleSelector";
 import { ThemeSelector } from "./components/ThemeSelector";
 import classes from "./ExamplePreviewApp.module.css";
@@ -58,7 +59,7 @@ type InternalExampleEntry = {
   title: string;
   description: string;
   component: React.ComponentType;
-  category: "basic" | "advanced" | "custom" | "layout" | "design" | "data";
+  category: "basic" | "advanced" | "custom" | "layout" | "design" | "data" | "performance";
 };
 
 const examples: InternalExampleEntry[] = [
@@ -146,6 +147,13 @@ const examples: InternalExampleEntry[] = [
     description: "Open floating sub-editors per node with live minimap previews.",
     component: AdvancedNestedEditorExample,
     category: "advanced",
+  },
+  {
+    id: "fractal-stress-test",
+    title: "Fractal Node Stress Test",
+    description: "Barnsley Fern fractal pattern for testing canvas snapshot GPU optimization at low zoom levels.",
+    component: FractalNodeStressTest,
+    category: "performance",
   },
   {
     id: "custom-port-renderer",
@@ -474,6 +482,7 @@ export function ExamplePreviewApp(): React.ReactElement {
         ],
       },
       { id: "data", label: "Data", examples: filterByCategory("data") },
+      { id: "performance", label: "Performance", examples: filterByCategory("performance") },
     ];
   }, [selectorExamples]);
 
