@@ -56,6 +56,7 @@ export function createCachedPortResolver(): PortResolver & {
   type PortCacheEntry = {
     nodeType: string;
     nodeData: Node["data"];
+    definition: NodeDefinition;
     ports: Port[];
   };
 
@@ -68,7 +69,7 @@ export function createCachedPortResolver(): PortResolver & {
 
       // Check cache first
       const cached = portCache.get(cacheKey);
-      if (cached && cached.nodeType === node.type && cached.nodeData === node.data) {
+      if (cached && cached.nodeType === node.type && cached.nodeData === node.data && cached.definition === definition) {
         return cached.ports;
       }
 
@@ -76,7 +77,7 @@ export function createCachedPortResolver(): PortResolver & {
       const ports = deriveNodePorts(node, definition);
 
       // Cache the result
-      portCache.set(cacheKey, { nodeType: node.type, nodeData: node.data, ports });
+      portCache.set(cacheKey, { nodeType: node.type, nodeData: node.data, definition, ports });
 
       return ports;
     },
