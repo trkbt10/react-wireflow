@@ -12,8 +12,12 @@
   ],
   "license": "Unlicense",
   "files": [
+    "src",
     "dist",
-    "public/themes"
+    "public/themes",
+    "docs",
+    "skills",
+    ".claude-plugin"
   ],
   "exports": {
     ".": {
@@ -158,8 +162,8 @@
     "vitest": "^4.0.15"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "dependencies": {},
   "description": "Composable React node editor canvas with configurable nodes, connections, and inspector UI.",

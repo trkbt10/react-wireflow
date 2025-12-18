@@ -1,0 +1,8 @@
+{
+  "name": "react-wireflow",
+  "description": "Node editor library for React - provides skills for creating custom nodes, inspectors, and connections",
+  "version": "0.7.1",
+  "author": {
+    "name": "trkbt10"
+  }
+}

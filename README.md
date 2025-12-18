@@ -13,6 +13,8 @@ Type-safe node definitions, customizable renderers, grid-based layouts, settings
 
 ## Installation
 
+Requires React `^19.2.0` (uses `useEffectEvent`).
+
 ```bash
 npm install react-wireflow
 ```

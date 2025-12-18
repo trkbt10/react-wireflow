@@ -134,7 +134,18 @@ type PortConnectionContext = {
   fromDefinition?: NodeDefinition;
   toDefinition?: NodeDefinition;
   allConnections?: Record<string, Connection>;
+  dataTypeCompatible: boolean;  // Result of default data type check
 };
+```
+
+The `dataTypeCompatible` field allows your `canConnect` function to use the default data type check as a baseline and only override it when needed:
+
+```typescript
+canConnect: (context: PortConnectionContext) => {
+  // Use default data type check, but also require matching metadata
+  return context.dataTypeCompatible &&
+         context.fromNode?.data.category === context.toNode?.data.category;
+}
 ```
 
 ## 3. Node-Level Validation (`validateConnection`)
@@ -214,9 +225,11 @@ When a connection is attempted, validation occurs in this order:
 1. **Basic checks**: Same node? Same port type (input-input/output-output)?
 2. **Duplicate check**: Does this exact connection already exist?
 3. **validateConnection**: Node-level validation callbacks
-4. **dataType**: Type compatibility check
-5. **canConnect**: Port-level predicate functions
-6. **maxConnections**: Capacity limit check
+4. **dataType / canConnect**: Type compatibility or custom predicate
+   - If `canConnect` is defined on either port, it **completely overrides** the data type check
+   - If no `canConnect` is defined, the default data type compatibility check is used
+   - `canConnect` receives `dataTypeCompatible` in context so it can reference the default result if needed
+5. **maxConnections**: Capacity limit check
 
 If any check fails, the connection is rejected.
 
